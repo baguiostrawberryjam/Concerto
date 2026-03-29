@@ -1,4 +1,4 @@
-package com.example.concerto; // Your package name
+package com.example.concerto;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -41,18 +41,15 @@ public class MainActivity extends AppCompatActivity {
         authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
 
         if (savedInstanceState == null) {
-            Fragment startingFragment;
-
             if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-                startingFragment = new ConnectSpotifyFragment();
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragment_container, new DashboardFragment(), null)
+                        .commit();
             } else {
-                startingFragment = new LoginFragment();
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragment_container, new LoginFragment(), null)
+                        .commit();
             }
-
-            getSupportFragmentManager().beginTransaction()
-                    .setReorderingAllowed(true)
-                    .add(R.id.fragment_container, startingFragment, null)
-                    .commit();
         }
     }
 

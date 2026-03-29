@@ -8,15 +8,22 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentSignupBinding;
+import com.example.concerto.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class SignupFragment extends Fragment {
 
     private FirebaseAuth mAuth;
     private FragmentSignupBinding bind;
+    private AuthViewModel authViewModel;
 
     @Nullable
     @Override
@@ -29,6 +36,9 @@ public class SignupFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mAuth = FirebaseAuth.getInstance();
+
+        // Grab the AuthViewModel
+        authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
 
         bind.btnSignup.setOnClickListener(v -> createFirebaseAccount());
 
@@ -52,7 +62,25 @@ public class SignupFragment extends Fragment {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
-                            // Save the username to the Firebase User Profile
+                            String uid = user.getUid();
+
+                            User newUser = new User(username, email);
+
+                            DatabaseReference ref = FirebaseDatabase.getInstance()
+                                    .getReference("users");
+
+                            ref.child(uid).setValue(newUser)
+                                    .addOnSuccessListener(aVoid -> {
+                                        Toast.makeText(requireContext(), "User saved!", Toast.LENGTH_SHORT).show();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(requireContext(),
+                                                "Failed: " + e.getMessage(),
+                                                Toast.LENGTH_LONG).show();
+                                    });
+
+                            authViewModel.logoutSpotify();
+
                             UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                                     .setDisplayName(username)
                                     .build();
@@ -61,7 +89,7 @@ public class SignupFragment extends Fragment {
                                     .addOnCompleteListener(profileTask -> {
                                         if (isAdded()) {
                                             requireActivity().getSupportFragmentManager().beginTransaction()
-                                                    .replace(R.id.fragment_container, new ConnectSpotifyFragment())
+                                                    .replace(R.id.fragment_container, new DashboardFragment())
                                                     .commit();
                                         }
                                     });

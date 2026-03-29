@@ -13,7 +13,6 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentConnectSpotifyBinding;
 import com.example.concerto.utils.PKCEUtil;
-import com.google.firebase.auth.FirebaseAuth;
 import com.spotify.sdk.android.auth.AuthorizationRequest;
 import com.spotify.sdk.android.auth.AuthorizationResponse;
 
@@ -23,7 +22,6 @@ public class ConnectSpotifyFragment extends Fragment {
     private static final String REDIRECT_URI = "concerto-app://callback";
 
     private AuthViewModel authViewModel;
-    private FirebaseAuth mAuth;
     private FragmentConnectSpotifyBinding bind;
 
     @Nullable
@@ -37,32 +35,25 @@ public class ConnectSpotifyFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Share the ViewModel with MainActivity
         authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
-        mAuth = FirebaseAuth.getInstance();
 
+        // OBSERVER: Watch for the token to arrive from MainActivity
         authViewModel.getSpotifyToken().observe(getViewLifecycleOwner(), token -> {
             if (token != null) {
-                Toast.makeText(requireContext(), "Spotify Connected!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Spotify Connected successfully!", Toast.LENGTH_SHORT).show();
 
-                // Navigate to DashboardFragment
-                if (isAdded()) {
-                    requireActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.fragment_container, new DashboardFragment())
-                            .commit();
-                }
+                // Success! Remove this Fragment and go back to the Dashboard
+                requireActivity().getSupportFragmentManager().popBackStack();
             }
         });
 
         bind.btnSpotifyLogin.setOnClickListener(v -> startSpotifyLogin());
 
+        // Change your old Logout button into a "Cancel" button for this screen
+        bind.btnLogout.setText("Cancel");
         bind.btnLogout.setOnClickListener(v -> {
-            mAuth.signOut();
-
-            authViewModel.setSpotifyToken(null);
-
-            requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new LoginFragment())
-                    .commit();
+            requireActivity().getSupportFragmentManager().popBackStack();
         });
     }
 
