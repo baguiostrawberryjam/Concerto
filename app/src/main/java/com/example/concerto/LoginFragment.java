@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentLoginBinding;
+import com.example.concerto.player.PlayerFragment;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class LoginFragment extends Fragment {
@@ -65,9 +66,15 @@ public class LoginFragment extends Fragment {
 
                             if (getActivity() != null && !getActivity().isFinishing()) {
                                 Log.d("LoginProcess", "3. Navigating to Dashboard...");
-                                getActivity().getSupportFragmentManager().beginTransaction()
+                                // 1. Send them to the Dashboard
+                                requireActivity().getSupportFragmentManager().beginTransaction()
                                         .replace(R.id.fragment_container, new DashboardFragment())
-                                        .commitAllowingStateLoss(); // Prevents crashes if the system is busy
+                                        .commit();
+
+                                // 2. NEW: Spawn the Persistent Player in its container!
+                                requireActivity().getSupportFragmentManager().beginTransaction()
+                                        .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
+                                        .commit();
                             } else {
                                 Log.e("LoginProcess", "ERROR: Activity is null or finishing! Cannot navigate.");
                             }

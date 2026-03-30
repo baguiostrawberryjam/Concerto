@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import com.example.concerto.auth.AuthViewModel; // Ensure this import is correct
 import com.example.concerto.databinding.ActivityMainBinding;
+import com.example.concerto.player.PlayerFragment;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -44,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
             if (FirebaseAuth.getInstance().getCurrentUser() != null) {
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.fragment_container, new DashboardFragment(), null)
+                        .commit();
+
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
                         .commit();
             } else {
                 getSupportFragmentManager().beginTransaction()

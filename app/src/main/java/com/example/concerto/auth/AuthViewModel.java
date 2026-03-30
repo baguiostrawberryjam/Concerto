@@ -2,6 +2,8 @@ package com.example.concerto.auth;
 
 import android.app.Application;
 import android.util.Log;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -80,19 +82,18 @@ public class AuthViewModel extends AndroidViewModel {
                                 String newAccessToken = tokenManager.refreshAccessToken(refreshToken);
 
                                 if (newAccessToken != null) {
-
                                     db.child("accessToken").setValue(newAccessToken);
                                     db.child("expiresAt").setValue(System.currentTimeMillis() + (3600 * 1000));
 
-                                    // Update UI
                                     setSpotifyToken(newAccessToken);
-
                                     Log.d("SpotifyAuth", "Token refreshed automatically!");
                                 } else {
                                     Log.e("SpotifyAuth", "Failed to refresh token");
                                 }
 
-                                if (onComplete != null) onComplete.run();
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    if (onComplete != null) onComplete.run();
+                                });
 
                             }).start();
 

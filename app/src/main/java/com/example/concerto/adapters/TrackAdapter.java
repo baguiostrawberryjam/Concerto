@@ -11,10 +11,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.concerto.ConnectSpotifyFragment;
-import com.example.concerto.PlayerFragment;
+import com.example.concerto.player.PlayerFragment;
+import com.example.concerto.player.PlayerViewModel;
 import com.example.concerto.R;
 import com.spotify.protocol.types.Track;
 
@@ -79,15 +81,10 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.TrackViewHol
             if (canPlayMusic) {
                 Toast.makeText(v.getContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
 
-                PlayerFragment playerFragment = new PlayerFragment();
-                Bundle args = new Bundle();
-                args.putString("TRACK_URI", track.uri);
-                playerFragment.setArguments(args);
+                PlayerViewModel playerViewModel = new ViewModelProvider(activity).get(PlayerViewModel.class);
+                playerViewModel.playTrack(track.uri);
+                playerViewModel.expandPlayer();
 
-                activity.getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, playerFragment)
-                        .addToBackStack(null)
-                        .commit();
             } else {
                 Toast.makeText(v.getContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
                 activity.getSupportFragmentManager().beginTransaction()

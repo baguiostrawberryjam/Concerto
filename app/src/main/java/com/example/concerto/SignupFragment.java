@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentSignupBinding;
 import com.example.concerto.models.User;
+import com.example.concerto.player.PlayerFragment;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
@@ -88,8 +89,14 @@ public class SignupFragment extends Fragment {
                             user.updateProfile(profileUpdates)
                                     .addOnCompleteListener(profileTask -> {
                                         if (isAdded()) {
+                                            // 1. Send them to the Dashboard
                                             requireActivity().getSupportFragmentManager().beginTransaction()
                                                     .replace(R.id.fragment_container, new DashboardFragment())
+                                                    .commit();
+
+                                            // 2. NEW: Spawn the Persistent Player in its container!
+                                            requireActivity().getSupportFragmentManager().beginTransaction()
+                                                    .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
                                                     .commit();
                                         }
                                     });

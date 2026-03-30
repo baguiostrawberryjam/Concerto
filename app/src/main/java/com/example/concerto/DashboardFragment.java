@@ -16,6 +16,8 @@ import com.example.concerto.databinding.FragmentDashboardBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import com.example.concerto.player.PlayerViewModel;
+
 public class DashboardFragment extends Fragment {
 
     private DashboardViewModel dashboardViewModel;
@@ -65,7 +67,29 @@ public class DashboardFragment extends Fragment {
             }
         });
 
-        // Toggle UI based on connection status
+        authViewModel.getSpotifyToken().observe(getViewLifecycleOwner(), token -> {
+            boolean isConnected = (token != null && !token.trim().isEmpty());
+
+            trackAdapter.setCanPlayMusic(isConnected);
+
+            bind.btnConnectSpotify.setVisibility(isConnected ? View.GONE : View.VISIBLE);
+
+            if (isConnected && trackAdapter.getItemCount() == 0) {
+                dashboardViewModel.loadRandomSongs();
+            }
+        });
+
+        if (authViewModel.getSpotifyToken().getValue() == null) {
+            authViewModel.restoreSpotifyTokenFromFirebase(() -> {
+                if (trackAdapter.getItemCount() == 0) {
+                    dashboardViewModel.loadRandomSongs();
+                }
+            });
+        } else if (trackAdapter.getItemCount() == 0) {
+            // We already have the token from the Login screen, just load the songs!
+            dashboardViewModel.loadRandomSongs();
+        }
+
         dashboardViewModel.getCanPlayMusic().observe(getViewLifecycleOwner(), canPlay -> {
             trackAdapter.setCanPlayMusic(canPlay);
             if (canPlay) {
@@ -73,10 +97,6 @@ public class DashboardFragment extends Fragment {
             } else {
                 bind.btnConnectSpotify.setVisibility(View.VISIBLE);
             }
-        });
-
-        authViewModel.restoreSpotifyTokenFromFirebase(() -> {
-            dashboardViewModel.loadRandomSongs();
         });
 
         // NEW: Navigate to the ConnectSpotifyFragment!
@@ -88,6 +108,19 @@ public class DashboardFragment extends Fragment {
         });
 
         bind.btnLogout.setOnClickListener(v -> {
+            // 1. Tell the player to pause immediately
+            PlayerViewModel playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
+            playerViewModel.pausePlayer();
+
+            // 2. Explicitly remove the PlayerFragment so it doesn't stay alive in the background
+            Fragment playerFragment = requireActivity().getSupportFragmentManager().findFragmentByTag("PLAYER");
+            if (playerFragment != null) {
+                requireActivity().getSupportFragmentManager().beginTransaction()
+                        .remove(playerFragment)
+                        .commit();
+            }
+
+            // 3. Proceed with the normal logout flow
             mAuth.signOut();
             authViewModel.logoutSpotify();
 
