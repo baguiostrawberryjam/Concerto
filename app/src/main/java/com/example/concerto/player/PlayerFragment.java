@@ -24,7 +24,9 @@ public class PlayerFragment extends Fragment {
     private boolean isSubscribed = false;
 
     private FragmentPlayerBinding bind;
+
     private PlayerViewModel playerViewModel;
+
     private BottomSheetBehavior<View> bottomSheetBehavior;
     private BottomSheetBehavior.BottomSheetCallback bottomSheetCallback;
 
@@ -45,6 +47,75 @@ public class PlayerFragment extends Fragment {
         setupBottomSheet();
         setupButtons();
         observePlayerCommands();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        spotifyManager.disconnect();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+
+        if (bottomSheetBehavior != null && bottomSheetCallback != null) {
+            bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback);
+        }
+
+        bind = null;
+    }
+
+    private void initViewModels() {
+        playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
+    }
+
+    private void setupBottomSheet() {
+        View bottomSheet = requireActivity().findViewById(R.id.player_sheet_container);
+        if (bottomSheet != null) {
+            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+
+            bottomSheetBehavior.setHideable(true);
+
+            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+
+            bottomSheetCallback = new BottomSheetBehavior.BottomSheetCallback() {
+                @Override
+                public void onStateChanged(@NonNull View bottomSheet, int newState) {
+                }
+
+                @Override
+                public void onSlide(@NonNull View bottomSheet, float slideOffset) {
+                    if (bind == null) return;
+
+                    bind.layoutMiniPlayer.setAlpha(1.0f - slideOffset);
+                    bind.layoutMiniPlayer.setVisibility(slideOffset > 0.95f ? View.INVISIBLE : View.VISIBLE);
+
+                    bind.layoutFullPlayer.setAlpha(slideOffset);
+                    bind.layoutFullPlayer.setVisibility(slideOffset < 0.05f ? View.INVISIBLE : View.VISIBLE);
+                }
+            };
+
+            bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback);
+
+            bind.layoutMiniPlayer.setOnClickListener(v -> expandPlayer());
+        }
+    }
+
+    private void setupButtons() {
+        View.OnClickListener togglePlayPause = v -> {
+            if (spotifyManager.isReady()) {
+            Boolean isPaused = playerViewModel.getIsCurrentlyPaused().getValue();
+
+            if (isPaused != null && isPaused) {
+                spotifyManager.resume();
+            } else {
+                spotifyManager.pause();
+            }
+        }
+        };
+        bind.btnPlayerPlay.setOnClickListener(togglePlayPause);
+        bind.btnMiniPlay.setOnClickListener(togglePlayPause);
     }
 
     private void subscribeToPlayerState() {
@@ -70,7 +141,6 @@ public class PlayerFragment extends Fragment {
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
             }
 
-            // Image loading now via manager
             spotifyManager.loadImage(track.imageUri, bitmap -> {
                 if (bind == null) return;
 
@@ -78,76 +148,6 @@ public class PlayerFragment extends Fragment {
                 bind.ivMiniAlbumArt.setImageBitmap(bitmap);
             });
         });
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        spotifyManager.disconnect();
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-
-        if (bottomSheetBehavior != null && bottomSheetCallback != null) {
-            bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback);
-        }
-
-        bind = null;
-    }
-
-    private void initViewModels() {
-        playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
-    }
-
-    private void setupBottomSheet() {
-
-        View bottomSheet = requireActivity().findViewById(R.id.player_sheet_container);
-        if (bottomSheet != null) {
-            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-
-            bottomSheetCallback = new BottomSheetBehavior.BottomSheetCallback() {
-                @Override
-                public void onStateChanged(@NonNull View bottomSheet, int newState) {
-                }
-
-                @Override
-                public void onSlide(@NonNull View bottomSheet, float slideOffset) {
-                    if (bind == null) return;
-
-                    bind.layoutMiniPlayer.setAlpha(1.0f - slideOffset);
-                    bind.layoutMiniPlayer.setVisibility(slideOffset > 0.95f ? View.INVISIBLE : View.VISIBLE);
-
-                    bind.layoutFullPlayer.setAlpha(slideOffset);
-                    bind.layoutFullPlayer.setVisibility(slideOffset < 0.05f ? View.INVISIBLE : View.VISIBLE);
-                }
-            };
-
-            bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback);
-
-            bind.layoutMiniPlayer.setOnClickListener(v -> {
-                expandPlayer();
-            });
-        }
-
-    }
-
-    private void setupButtons() {
-        View.OnClickListener togglePlayPause = v -> {
-            if (spotifyManager.isReady()) {
-            Boolean isPaused = playerViewModel.getIsCurrentlyPaused().getValue();
-
-            if (isPaused != null && isPaused) {
-                spotifyManager.resume();
-            } else {
-                spotifyManager.pause();
-            }
-        }
-        };
-        bind.btnPlayerPlay.setOnClickListener(togglePlayPause);
-        bind.btnMiniPlay.setOnClickListener(togglePlayPause);
     }
 
     private void observePlayerCommands() {

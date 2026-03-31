@@ -12,17 +12,10 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentSignupBinding;
-import com.example.concerto.models.User;
 import com.example.concerto.player.PlayerFragment;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 public class SignupFragment extends Fragment {
 
-    private FirebaseAuth mAuth;
     private FragmentSignupBinding bind;
     private AuthViewModel authViewModel;
 
@@ -36,19 +29,30 @@ public class SignupFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mAuth = FirebaseAuth.getInstance();
 
-        // Grab the AuthViewModel
+        initViewModels();
+        setupButtons();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        bind = null;
+    }
+
+    private void initViewModels() {
         authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
+    }
 
-        bind.btnSignup.setOnClickListener(v -> createFirebaseAccount());
+    private void setupButtons() {
+        bind.btnSignup.setOnClickListener(v -> createAccount());
 
         bind.btnGoToLogin.setOnClickListener(v -> {
             requireActivity().getSupportFragmentManager().popBackStack();
         });
     }
 
-    private void createFirebaseAccount() {
+    private void createAccount() {
         String username = bind.etUsername.getText().toString().trim();
         String email = bind.etEmail.getText().toString().trim();
         String pass = bind.etPassword.getText().toString().trim();
@@ -58,58 +62,28 @@ public class SignupFragment extends Fragment {
             return;
         }
 
-        mAuth.createUserWithEmailAndPassword(email, pass)
-                .addOnCompleteListener(requireActivity(), task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null) {
-                            String uid = user.getUid();
+        authViewModel.signup(email, pass, username, new AuthViewModel.SignupCallback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(requireContext(), "Account created successfully!", Toast.LENGTH_SHORT).show();
 
-                            User newUser = new User(username, email);
+                authViewModel.logoutSpotify();
 
-                            DatabaseReference ref = FirebaseDatabase.getInstance()
-                                    .getReference("users");
+                if (isAdded()) {
+                    requireActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragment_container, new DashboardFragment())
+                            .commit();
 
-                            ref.child(uid).setValue(newUser)
-                                    .addOnSuccessListener(aVoid -> {
-                                        Toast.makeText(requireContext(), "User saved!", Toast.LENGTH_SHORT).show();
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        Toast.makeText(requireContext(),
-                                                "Failed: " + e.getMessage(),
-                                                Toast.LENGTH_LONG).show();
-                                    });
+                    requireActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
+                            .commit();
+                }
+            }
 
-                            authViewModel.logoutSpotify();
-
-                            UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                                    .setDisplayName(username)
-                                    .build();
-
-                            user.updateProfile(profileUpdates)
-                                    .addOnCompleteListener(profileTask -> {
-                                        if (isAdded()) {
-                                            // 1. Send them to the Dashboard
-                                            requireActivity().getSupportFragmentManager().beginTransaction()
-                                                    .replace(R.id.fragment_container, new DashboardFragment())
-                                                    .commit();
-
-                                            // 2. NEW: Spawn the Persistent Player in its container!
-                                            requireActivity().getSupportFragmentManager().beginTransaction()
-                                                    .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
-                                                    .commit();
-                                        }
-                                    });
-                        }
-                    } else {
-                        Toast.makeText(requireContext(), "Sign Up Failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                });
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        bind = null;
+            @Override
+            public void onError(String errorMessage) {
+                Toast.makeText(requireContext(), "Sign Up Failed: " + errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }

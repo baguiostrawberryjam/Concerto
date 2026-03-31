@@ -1,9 +1,6 @@
 package com.example.concerto.auth;
 
 import android.app.Application;
-import android.util.Log;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -11,11 +8,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.concerto.spotify.SpotifyAppTokenManager;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 public class AuthViewModel extends AndroidViewModel {
 
@@ -23,9 +15,27 @@ public class AuthViewModel extends AndroidViewModel {
     private final SpotifyAppTokenManager tokenManager;
     private final MutableLiveData<String> codeVerifier = new MutableLiveData<>();
 
+    private final AuthManager authManager;
+
     public AuthViewModel(@NonNull Application application) {
         super(application);
         tokenManager = SpotifyAppTokenManager.getInstance(application);
+
+        authManager = new AuthManager(tokenManager);
+    }
+
+    public interface LoginCallback {
+        void onSuccess();
+        void onError(String errorMessage);
+    }
+
+    public interface SignupCallback {
+        void onSuccess();
+        void onError(String errorMessage);
+    }
+
+    public String getCurrentUsername() {
+        return authManager.getCurrentUsername();
     }
 
     public void setSpotifyToken(String token) {
@@ -45,70 +55,57 @@ public class AuthViewModel extends AndroidViewModel {
         return codeVerifier.getValue();
     }
 
+    public void login(String email, String password, LoginCallback callback) {
+        authManager.loginWithEmailAndPassword(email, password, new AuthManager.LoginListener() {
+            @Override
+            public void onSuccess() {
+                if (callback != null) callback.onSuccess();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                if (callback != null) callback.onError(errorMessage);
+            }
+        });
+    }
+
+    public void signup(String email, String password, String username, SignupCallback callback) {
+        authManager.signupWithEmailAndPassword(email, password, username, new AuthManager.SignupListener() {
+            @Override
+            public void onSuccess() {
+                if (callback != null) callback.onSuccess();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                if (callback != null) callback.onError(errorMessage);
+            }
+        });
+    }
+
+    public void logoutFull() {
+        authManager.logoutFirebase();
+        logoutSpotify(); // We call the existing Spotify logout method here!
+    }
+
     public void logoutSpotify() {
         spotifyToken.postValue(null);
-        tokenManager.clearUserToken(); // Clears the memory cache
+        tokenManager.clearUserToken();
     }
 
     public void restoreSpotifyTokenFromFirebase(Runnable onComplete) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            if (onComplete != null) onComplete.run();
-            return;
-        }
+        authManager.restoreSpotifyTokenFromFirebase(new AuthManager.TokenRestoreListener() {
+            @Override
+            public void onSuccess(String token) {
+                setSpotifyToken(token);
+            }
 
-        DatabaseReference db = FirebaseDatabase.getInstance("https://concerto-b02f9-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference()
-                .child("users")
-                .child(user.getUid())
-                .child("spotify");
-
-        db.get().addOnCompleteListener(task -> {
-            if (task.isSuccessful() && task.getResult().exists()) {
-                DataSnapshot snapshot = task.getResult();
-                String accessToken = snapshot.child("accessToken").getValue(String.class);
-                Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
-
-                if (accessToken != null) {
-                    if (expiresAt != null && System.currentTimeMillis() < expiresAt) {
-                        setSpotifyToken(accessToken); // This loads it from RTDB directly into RAM!
-                        Log.d("SpotifyAuth", "Token auto-restored from Firebase!");
-                    } else {
-                        Log.d("SpotifyAuth", "Token in Firebase is expired.");
-
-                        String refreshToken = snapshot.child("refreshToken").getValue(String.class);
-
-                        if (refreshToken != null) {
-                            new Thread(() -> {
-                                String newAccessToken = tokenManager.refreshAccessToken(refreshToken);
-
-                                if (newAccessToken != null) {
-                                    db.child("accessToken").setValue(newAccessToken);
-                                    db.child("expiresAt").setValue(System.currentTimeMillis() + (3600 * 1000));
-
-                                    setSpotifyToken(newAccessToken);
-                                    Log.d("SpotifyAuth", "Token refreshed automatically!");
-                                } else {
-                                    Log.e("SpotifyAuth", "Failed to refresh token");
-                                }
-
-                                new Handler(Looper.getMainLooper()).post(() -> {
-                                    if (onComplete != null) onComplete.run();
-                                });
-
-                            }).start();
-
-                            return; // prevent double-calling onComplete
-                        }
-                    }
-                }
-            } else {
-                if (task.getException() != null) {
-                    Log.e("SpotifyAuth", "Firebase DB Error: " + task.getException().getMessage());
-                } else {
-                    Log.d("SpotifyAuth", "No Spotify data found in Firebase for this user.");
+            @Override
+            public void onComplete() {
+                if (onComplete != null) {
+                    onComplete.run();
                 }
             }
-            if (onComplete != null) onComplete.run();
         });
     }
 }

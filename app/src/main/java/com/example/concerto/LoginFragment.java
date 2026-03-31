@@ -14,12 +14,11 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentLoginBinding;
 import com.example.concerto.player.PlayerFragment;
-import com.google.firebase.auth.FirebaseAuth;
 
 public class LoginFragment extends Fragment {
 
-    private FirebaseAuth mAuth;
     private FragmentLoginBinding bind;
+    private AuthViewModel authViewModel;
 
     @Nullable
     @Override
@@ -31,8 +30,23 @@ public class LoginFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mAuth = FirebaseAuth.getInstance();
 
+        initViewModels();
+
+        setupButtons();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        bind = null;
+    }
+
+    private void initViewModels() {
+        authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
+    }
+
+    private void setupButtons() {
         bind.btnLogin.setOnClickListener(v -> loginFirebase());
 
         bind.btnGoToSignup.setOnClickListener(v -> {
@@ -48,48 +62,35 @@ public class LoginFragment extends Fragment {
         String password = bind.etPassword.getText().toString().trim();
         if (email.isEmpty() || password.isEmpty()) return;
 
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(requireActivity(), task -> {
-                    if (task.isSuccessful()) {
-                        // FIREBASE LOGIN SUCCESS!
+        authViewModel.login(email, password, new AuthViewModel.LoginCallback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(requireContext(), "Logging in... checking Spotify connection", Toast.LENGTH_SHORT).show();
 
-                        Toast.makeText(requireContext(), "Logging in... checking Spotify connection", Toast.LENGTH_SHORT).show();
+                Log.d("LoginProcess", "1. Auth success! Attempting to restore token...");
 
-                        // Attempt to restore the token
+                authViewModel.restoreSpotifyTokenFromFirebase(() -> {
+                    Log.d("LoginProcess", "2. Firebase Database check finished!");
 
-                        AuthViewModel authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
+                    if (getActivity() != null && !getActivity().isFinishing()) {
+                        Log.d("LoginProcess", "3. Navigating to Dashboard...");
+                        requireActivity().getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.fragment_container, new DashboardFragment())
+                                .commit();
 
-                        Log.d("LoginProcess", "1. Auth success! Attempting to restore token...");
-
-                        authViewModel.restoreSpotifyTokenFromFirebase(() -> {
-                            Log.d("LoginProcess", "2. Firebase Database check finished!");
-
-                            if (getActivity() != null && !getActivity().isFinishing()) {
-                                Log.d("LoginProcess", "3. Navigating to Dashboard...");
-                                // 1. Send them to the Dashboard
-                                requireActivity().getSupportFragmentManager().beginTransaction()
-                                        .replace(R.id.fragment_container, new DashboardFragment())
-                                        .commit();
-
-                                // 2. NEW: Spawn the Persistent Player in its container!
-                                requireActivity().getSupportFragmentManager().beginTransaction()
-                                        .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
-                                        .commit();
-                            } else {
-                                Log.e("LoginProcess", "ERROR: Activity is null or finishing! Cannot navigate.");
-                            }
-                        });
-
+                        requireActivity().getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
+                                .commit();
                     } else {
-                        // Firebase Login Failed
-                        Toast.makeText(requireContext(), "Authentication failed.", Toast.LENGTH_SHORT).show();
+                        Log.e("LoginProcess", "ERROR: Activity is null or finishing! Cannot navigate.");
                     }
                 });
-    }
+            }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        bind = null;
+            @Override
+            public void onError(String errorMessage) {
+                Toast.makeText(requireContext(), "Authentication failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
