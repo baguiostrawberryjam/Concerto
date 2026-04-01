@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Link Your Music"
+        android:text="@string/spotify_link_title"
         android:textSize="28sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp"/>
@@ -17,7 +17,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Concerto requires a Spotify connection to play music."
+        android:text="@string/spotify_link_desc"
         android:textAlignment="center"
         android:textSize="16sp"
         android:layout_marginBottom="32dp"/>
@@ -27,16 +27,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:text="Connect to Spotify"
-        android:backgroundTint="#1DB954"
+        android:text="@string/spotify_connect_button"
+        android:backgroundTint="@color/spotify_green"
         android:textColor="#FFFFFF"
         android:layout_marginBottom="16dp"/>
 
     <Button
-        android:id="@+id/btnLogout"
+        android:id="@+id/btnCancel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Log out of Concerto"
+        android:text="@string/action_cancel"
         style="?android:attr/borderlessButtonStyle"
         android:textColor="@color/error"/>
 </LinearLayout>

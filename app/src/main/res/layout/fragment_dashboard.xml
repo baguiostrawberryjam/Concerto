@@ -36,7 +36,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Log out"
+            android:text="@string/action_logout"
             style="?android:attr/borderlessButtonStyle"
             android:textColor="@color/error"
             android:layout_marginStart="4dp"/>
@@ -54,14 +54,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Search for a song..."
+            android:hint="@string/search_hint"
             android:inputType="text"/>
 
         <Button
             android:id="@+id/btnSearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Search"
+            android:text="@string/action_search"
             android:layout_marginStart="8dp"/>
     </LinearLayout>
 

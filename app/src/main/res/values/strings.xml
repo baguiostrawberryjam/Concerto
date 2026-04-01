@@ -1,5 +1,32 @@
 <resources>
     <string name="app_name">Concerto</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="login_title">Concerto</string>
+    <string name="prompt_email">Email Address</string>
+    <string name="prompt_password">Password</string>
+    <string name="prompt_username">Username</string>
+    <string name="action_login">Login</string>
+    <string name="action_signup">Sign-up</string>
+    <string name="action_create_account">Create Account</string>
+    <string name="nav_to_signup">Don\'t have an account? Sign up</string>
+    <string name="nav_to_login">Back to Login</string>
+
+    <string name="welcome_default">Welcome!</string>
+    <string name="connect_spotify">Connect Spotify</string>
+    <string name="action_logout">Log out</string>
+    <string name="search_hint">Search for a song...</string>
+    <string name="action_search">Search</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="spotify_link_title">Link Your Music</string>
+    <string name="spotify_link_desc">Concerto requires a Spotify connection to play music.</string>
+    <string name="spotify_connect_button">Connect to Spotify</string>
+
+    <string name="player_ready">Ready to Play</string>
+    <string name="player_not_playing">Not Playing</string>
+    <string name="player_tap_to_play">Tap a song to play</string>
+    <string name="track_default_title">Song Title</string>
+    <string name="track_default_artist">Artist Name</string>
+    <string name="desc_album_cover">Album Cover</string>
+    <string name="desc_play_song">Play Song</string>
 </resources>

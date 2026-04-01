@@ -60,7 +60,23 @@ public class DashboardFragment extends Fragment {
     }
 
     private void setupUI() {
-        trackAdapter = new TrackAdapter();
+        trackAdapter = new TrackAdapter((track, canPlay) -> {
+        if (canPlay) {
+            Toast.makeText(requireContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
+
+            playerViewModel.playTrack(track.uri);
+            playerViewModel.expandPlayer();
+        } else {
+            Toast.makeText(requireContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
+
+            // The Fragment handles Fragment Navigation safely
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new ConnectSpotifyFragment())
+                    .addToBackStack(null)
+                    .commit();
+        }
+    });
+
         bind.rvTracks.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(requireContext()));
         bind.rvTracks.setAdapter(trackAdapter);
 

@@ -1,42 +1,44 @@
 package com.example.concerto.adapters;
 
-import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.concerto.ConnectSpotifyFragment;
-import com.example.concerto.player.PlayerFragment;
-import com.example.concerto.player.PlayerViewModel;
 import com.example.concerto.R;
 import com.spotify.protocol.types.Track;
+import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.bumptech.glide.Glide;
 
 public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.TrackViewHolder> {
 
     private List<Track> trackList = new ArrayList<>();
     private boolean canPlayMusic = false;
 
-    // Method to update the list when the ViewModel gets new data
+    // 1. Create the Walkie-Talkie (Interface)
+    private final OnTrackClickListener listener;
+
+    public interface OnTrackClickListener {
+        void onTrackClick(Track track, boolean canPlay);
+    }
+
+    // 2. Require the listener when the Adapter is created
+    public TrackAdapter(OnTrackClickListener listener) {
+        this.listener = listener;
+    }
+
     public void setTracks(List<Track> tracks) {
         this.trackList = tracks;
         notifyDataSetChanged();
     }
 
-    // Method to enable/disable the play buttons based on Spotify connection
     public void setCanPlayMusic(boolean canPlay) {
         this.canPlayMusic = canPlay;
         notifyDataSetChanged();
@@ -63,34 +65,17 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.TrackViewHol
         if (track.imageUri != null && track.imageUri.raw != null && !track.imageUri.raw.isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(track.imageUri.raw)
-                    .placeholder(android.R.drawable.ic_menu_gallery) // Shows while loading
+                    .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(holder.ivAlbumCover);
         } else {
             holder.ivAlbumCover.setImageResource(android.R.drawable.ic_menu_gallery);
         }
 
-        if (canPlayMusic) {
-            holder.btnPlay.setAlpha(1.0f);
-        } else {
-            holder.btnPlay.setAlpha(0.3f);
-        }
+        holder.btnPlay.setAlpha(canPlayMusic ? 1.0f : 0.3f);
 
         holder.itemView.setOnClickListener(v -> {
-            AppCompatActivity activity = (AppCompatActivity) v.getContext();
-
-            if (canPlayMusic) {
-                Toast.makeText(v.getContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
-
-                PlayerViewModel playerViewModel = new ViewModelProvider(activity).get(PlayerViewModel.class);
-                playerViewModel.playTrack(track.uri);
-                playerViewModel.expandPlayer();
-
-            } else {
-                Toast.makeText(v.getContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
-                activity.getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, new ConnectSpotifyFragment())
-                        .addToBackStack(null)
-                        .commit();
+            if (listener != null) {
+                listener.onTrackClick(track, canPlayMusic);
             }
         });
     }

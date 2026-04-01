@@ -4,6 +4,16 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import com.example.concerto.spotify.SpotifyConfig;
+import org.json.JSONObject;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
 import com.example.concerto.spotify.SpotifyAppTokenManager;
 import com.example.concerto.models.User;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,6 +44,11 @@ public class AuthManager {
     public interface TokenRestoreListener {
         void onSuccess(String token);
         void onComplete();
+    }
+
+    public interface TokenExchangeListener {
+        void onSuccess(String accessToken);
+        void onError(String errorMessage);
     }
 
     public String getCurrentUsername() {
@@ -155,7 +170,75 @@ public class AuthManager {
         });
     }
 
+    public void tradeCodeForToken(String code, String verifier, TokenExchangeListener listener) {
+        new Thread(() -> {
+            try {
+                URL url = new URL("https://accounts.spotify.com/api/token");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setDoOutput(true);
+
+                String body = "client_id=" + SpotifyConfig.CLIENT_ID +
+                        "&grant_type=authorization_code" +
+                        "&code=" + code +
+                        "&redirect_uri=" + SpotifyConfig.REDIRECT_URI +
+                        "&code_verifier=" + verifier;
+
+                OutputStream os = conn.getOutputStream();
+                os.write(body.getBytes());
+                os.flush();
+                os.close();
+
+                InputStream is = conn.getInputStream();
+                Scanner scanner = new Scanner(is).useDelimiter("\\A");
+                String responseBody = scanner.hasNext() ? scanner.next() : "";
+
+                JSONObject jsonObject = new JSONObject(responseBody);
+
+                String accessToken = jsonObject.getString("access_token");
+                String refreshToken = jsonObject.optString("refresh_token");
+                int expiresIn = jsonObject.getInt("expires_in");
+
+                FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                if (currentUser != null) {
+                    String uid = currentUser.getUid();
+                    DatabaseReference db = FirebaseDatabase.getInstance("https://concerto-b02f9-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+
+                    Map<String, Object> spotifyData = new HashMap<>();
+                    spotifyData.put("accessToken", accessToken);
+                    spotifyData.put("expiresAt", System.currentTimeMillis() + (expiresIn * 1000));
+
+                    if (!refreshToken.isEmpty()) {
+                        spotifyData.put("refreshToken", refreshToken);
+                    }
+
+                    db.child("users").child(uid).child("spotify").updateChildren(spotifyData)
+                            .addOnCompleteListener(task -> {
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    if (listener != null) listener.onSuccess(accessToken);
+                                });
+                            });
+                } else {
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        if (listener != null) listener.onError("User not logged in");
+                    });
+                }
+
+            } catch (Exception e) {
+                Log.e("SpotifyAuth", "Failed to trade code for token: " + e.getMessage());
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    if (listener != null) listener.onError(e.getMessage());
+                });
+            }
+        }).start();
+    }
+
     public void logoutFirebase() {
         FirebaseAuth.getInstance().signOut();
+    }
+
+    public boolean isUserLoggedIn() {
+        return FirebaseAuth.getInstance().getCurrentUser() != null;
     }
 }

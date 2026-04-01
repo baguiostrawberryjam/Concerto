@@ -1,6 +1,7 @@
 package com.example.concerto.auth;
 
 import android.app.Application;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -107,5 +108,24 @@ public class AuthViewModel extends AndroidViewModel {
                 }
             }
         });
+    }
+
+    public void exchangeCodeForToken(String code, String verifier) {
+        authManager.tradeCodeForToken(code, verifier, new AuthManager.TokenExchangeListener() {
+            @Override
+            public void onSuccess(String accessToken) {
+                setSpotifyToken(accessToken);
+                Log.d("SpotifyAuth", "SUCCESS! Token secured using PKCE.");
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                Log.e("SpotifyAuth", "Token exchange failed: " + errorMessage);
+            }
+        });
+    }
+
+    public boolean isUserLoggedIn() {
+        return authManager.isUserLoggedIn();
     }
 }
