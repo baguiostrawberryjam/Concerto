@@ -1,4 +1,4 @@
-package com.example.concerto;
+package com.example.concerto.dashboard;
 
 import android.app.Application;
 import androidx.annotation.NonNull;

@@ -1,4 +1,4 @@
-package com.example.concerto;
+package com.example.concerto.auth;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,7 +10,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.concerto.auth.AuthViewModel;
+import com.example.concerto.dashboard.DashboardFragment;
+import com.example.concerto.R;
 import com.example.concerto.databinding.FragmentSignupBinding;
 import com.example.concerto.player.PlayerFragment;
 
@@ -69,13 +70,19 @@ public class SignupFragment extends Fragment {
 
                 authViewModel.logoutSpotify();
 
-                if (isAdded()) {
+                if (isAdded() && getActivity() != null && !getActivity().isFinishing()) {
+
+                    View bottomNav = requireActivity().findViewById(R.id.bottomNav);
+                    if (bottomNav != null) {
+                        bottomNav.setVisibility(View.VISIBLE);
+                    }
+
                     requireActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.fragment_container, new DashboardFragment())
+                            .replace(R.id.layoutFragmentContainer, new DashboardFragment())
                             .commit();
 
                     requireActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
+                            .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
                             .commit();
                 }
             }

@@ -9,6 +9,7 @@ public class PlayerViewModel extends ViewModel {
     private final MutableLiveData<String> commandPlayUri = new MutableLiveData<>();
     private final MutableLiveData<Boolean> commandExpand = new MutableLiveData<>();
     private final MutableLiveData<Boolean> commandPause = new MutableLiveData<>();
+    private final MutableLiveData<Long> commandSeekTo = new MutableLiveData<>(); // ADD THIS
 
     private final MutableLiveData<String> currentPlayingUri = new MutableLiveData<>("");
     private final MutableLiveData<Boolean> isCurrentlyPaused = new MutableLiveData<>(false);
@@ -21,6 +22,10 @@ public class PlayerViewModel extends ViewModel {
 
     public void pausePlayer() { commandPause.setValue(true); }
     public LiveData<Boolean> getCommandPause() { return commandPause; }
+
+    // ADD THESE TWO LINES
+    public void seekTo(long positionMs) { commandSeekTo.setValue(positionMs); }
+    public LiveData<Long> getCommandSeekTo() { return commandSeekTo; }
 
     public void setCurrentPlayingUri(String uri) { currentPlayingUri.setValue(uri); }
     public void setIsCurrentlyPaused(boolean isPaused) { isCurrentlyPaused.setValue(isPaused); }

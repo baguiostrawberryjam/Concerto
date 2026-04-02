@@ -1,4 +1,4 @@
-package com.example.concerto;
+package com.example.concerto.auth;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -11,7 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.concerto.auth.AuthViewModel;
+import com.example.concerto.dashboard.DashboardFragment;
+import com.example.concerto.R;
 import com.example.concerto.databinding.FragmentLoginBinding;
 import com.example.concerto.player.PlayerFragment;
 
@@ -51,7 +52,7 @@ public class LoginFragment extends Fragment {
 
         bind.btnGoToSignup.setOnClickListener(v -> {
             requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new SignupFragment())
+                    .replace(R.id.layoutFragmentContainer, new SignupFragment())
                     .addToBackStack(null)
                     .commit();
         });
@@ -69,17 +70,22 @@ public class LoginFragment extends Fragment {
 
                 Log.d("LoginProcess", "1. Auth success! Attempting to restore token...");
 
-                authViewModel.restoreSpotifyTokenFromFirebase(() -> {
-                    Log.d("LoginProcess", "2. Firebase Database check finished!");
+                authViewModel.restoreSpotifyTokenFromFirebase(() -> {Log.d("LoginProcess", "2. Firebase Database check finished!");
 
                     if (getActivity() != null && !getActivity().isFinishing()) {
                         Log.d("LoginProcess", "3. Navigating to Dashboard...");
+
+                        View bottomNav = requireActivity().findViewById(R.id.bottomNav);
+                        if (bottomNav != null) {
+                            bottomNav.setVisibility(View.VISIBLE);
+                        }
+
                         requireActivity().getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.fragment_container, new DashboardFragment())
+                                .replace(R.id.layoutFragmentContainer, new DashboardFragment())
                                 .commit();
 
                         requireActivity().getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.player_sheet_container, new PlayerFragment(), "PLAYER")
+                                .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
                                 .commit();
                     } else {
                         Log.e("LoginProcess", "ERROR: Activity is null or finishing! Cannot navigate.");

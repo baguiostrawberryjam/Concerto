@@ -1,4 +1,4 @@
-package com.example.concerto;
+package com.example.concerto.auth;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,7 +11,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.databinding.FragmentConnectSpotifyBinding;
 import com.example.concerto.spotify.SpotifyConfig;
 import com.example.concerto.utils.PKCEUtil;

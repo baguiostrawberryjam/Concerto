@@ -138,16 +138,17 @@ public class AuthManager {
 
                         if (refreshToken != null) {
                             new Thread(() -> {
-                                String newAccessToken = tokenManager.refreshAccessToken(refreshToken);
+                                String[] newTokens = tokenManager.refreshAccessToken(refreshToken);
 
-                                if (newAccessToken != null) {
-                                    db.child("accessToken").setValue(newAccessToken);
+                                if (newTokens != null) {
+                                    db.child("accessToken").setValue(newTokens[0]);
+                                    db.child("refreshToken").setValue(newTokens[1]);
                                     db.child("expiresAt").setValue(System.currentTimeMillis() + (3600 * 1000));
-                                    Log.d("SpotifyAuth", "Token refreshed automatically!");
+                                    Log.d("SpotifyAuth", "Token refreshed and rotated automatically!");
 
                                     new Handler(Looper.getMainLooper()).post(() -> {
                                         if (listener != null) {
-                                            listener.onSuccess(newAccessToken);
+                                            listener.onSuccess(newTokens[0]);
                                             listener.onComplete();
                                         }
                                     });

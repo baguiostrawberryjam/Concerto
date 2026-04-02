@@ -1,17 +1,18 @@
-package com.example.concerto.spotify;
+package com.example.concerto.player;
 
 import android.content.Context;
 
+import com.example.concerto.spotify.SpotifyConfig;
 import com.spotify.android.appremote.api.ConnectionParams;
 import com.spotify.android.appremote.api.Connector;
 import com.spotify.android.appremote.api.SpotifyAppRemote;
 
-public class SpotifyManager {
+public class SpotifyPlayerController {
 
     private SpotifyAppRemote appRemote;
     private Context context;
 
-    public SpotifyManager(Context context) {
+    public SpotifyPlayerController(Context context) {
         this.context = context.getApplicationContext();
     }
 
@@ -70,6 +71,18 @@ public class SpotifyManager {
         if (appRemote != null) {
             SpotifyAppRemote.disconnect(appRemote);
             appRemote = null;
+        }
+    }
+
+    public void seekTo(long positionMs) {
+        if (isReady()) {
+            appRemote.getPlayerApi().seekTo(positionMs);
+        }
+    }
+
+    public void getPlayerState(com.spotify.protocol.client.CallResult.ResultCallback<com.spotify.protocol.types.PlayerState> callback) {
+        if (isReady()) {
+            appRemote.getPlayerApi().getPlayerState().setResultCallback(callback);
         }
     }
 

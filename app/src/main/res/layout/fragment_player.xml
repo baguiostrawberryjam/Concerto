@@ -40,7 +40,41 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textAlignment="center"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginBottom="24dp" /> <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/tvCurrentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0:00"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+
+        <SeekBar
+            android:id="@+id/seekBarProgress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:progressTint="#1DB954"
+            android:thumbTint="#1DB954" />
+
+        <TextView
+            android:id="@+id/tvTotalTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0:00"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+    </LinearLayout>
 
         <ImageButton
             android:id="@+id/btnPlayerPlay"

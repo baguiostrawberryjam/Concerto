@@ -95,16 +95,16 @@ public class SpotifyAppTokenManager {
         return null;
     }
 
-    public String refreshAccessToken(String refreshToken) {
+    public String[] refreshAccessToken(String refreshToken) {
         try {
-            URL url = new URL("https://accounts." + "spotify.com/api/token");
+            URL url = new URL("https://accounts.spotify.com/api/token");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setDoOutput(true);
 
             String body = "grant_type=refresh_token" +
-                    "&refresh_token=" + refreshToken +
+                    "&refresh_token=" + java.net.URLEncoder.encode(refreshToken, "UTF-8") +
                     "&client_id=" + SpotifyConfig.CLIENT_ID;
 
             OutputStream os = conn.getOutputStream();
@@ -121,7 +121,12 @@ public class SpotifyAppTokenManager {
                 JSONObject jsonObject = new JSONObject(responseBody);
                 Log.d("SpotifyAuth", "Successfully refreshed User Token in the background!");
 
-                return jsonObject.getString("access_token");
+                String newAccessToken = jsonObject.getString("access_token");
+                // If Spotify provides a new refresh token, grab it. Otherwise, keep using the old one.
+                String newRefreshToken = jsonObject.optString("refresh_token", refreshToken);
+
+                // Return both tokens to the AuthManager
+                return new String[]{newAccessToken, newRefreshToken};
             } else {
                 Log.e("SpotifyAuth", "Failed to refresh User Token: " + conn.getResponseCode());
             }
