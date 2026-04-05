@@ -34,14 +34,15 @@ public class SpotifyRepository {
     }
 
     public List<Track> getRandomSongs() {
-        String token = tokenManager.getBestAvailableToken();
+        String token = tokenManager.getAppToken();
         List<Track> tracksList = new ArrayList<>();
 
         if (token != null) {
+            HttpURLConnection conn = null; // FIXED
             try {
                 URL url = new URL("https://api.spotify.com/v1/search?type=track&q=chopin:2023&limit=4");
 
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -49,59 +50,80 @@ public class SpotifyRepository {
                 int responseCode = conn.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_OK) {
 
-                    InputStream is = conn.getInputStream();
-                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                    String responseBody = scanner.hasNext() ? scanner.next() : "";
-                    scanner.close();
+                    // FIXED: Auto-close streams
+                    try (InputStream is = conn.getInputStream();
+                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
 
-                    JSONObject jsonObject = new JSONObject(responseBody);
-                    JSONObject tracksObject = jsonObject.getJSONObject("tracks");
-                    JSONArray itemsArray = tracksObject.getJSONArray("items");
+                        String responseBody = scanner.hasNext() ? scanner.next() : "";
 
-                    Log.d("TRACK_COUNT", "Items from API: " + itemsArray.length());
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        // Using optJSONObject to prevent crashes if the 'tracks' wrapper is missing
+                        JSONObject tracksObject = jsonObject.optJSONObject("tracks");
 
-                    for (int i = 0; i < itemsArray.length(); i++) {
-                        JSONObject trackJson = itemsArray.getJSONObject(i);
+                        if (tracksObject != null) {
+                            JSONArray itemsArray = tracksObject.optJSONArray("items");
 
-                        String trackName = trackJson.getString("name");
-                        String trackUri = trackJson.getString("uri");
+                            if (itemsArray != null) {
+                                Log.d("TRACK_COUNT", "Items from API: " + itemsArray.length());
 
-                        Log.d("TRACK_NAME", trackName);
+                                for (int i = 0; i < itemsArray.length(); i++) {
+                                    JSONObject trackJson = itemsArray.optJSONObject(i);
+                                    if (trackJson == null) continue; // Skip invalid entries
 
-                        // Grab ARTIST NAME
-                        String artistName = "";
-                        JSONArray artistsArray = trackJson.getJSONArray("artists");
-                        if (artistsArray.length() > 0) {
-                            artistName = artistsArray.getJSONObject(0).getString("name");
-                        }
+                                    // FIXED: Using optString prevents JSONExceptions
+                                    String trackName = trackJson.optString("name", "Unknown Track");
+                                    String trackUri = trackJson.optString("uri", "");
 
-                        // Grab ALBUM COVER
-                        String imageUrl = "";
-                        JSONObject albumObject = trackJson.optJSONObject("album");
-                        if (albumObject != null) {
-                            JSONArray imagesArray = albumObject.optJSONArray("images");
-                            // Spotify usually returns 3 sizes. Index 0 is the highest quality.
-                            if (imagesArray != null && imagesArray.length() > 0) {
-                                imageUrl = imagesArray.getJSONObject(0).getString("url");
+                                    // Grab ARTIST NAME Safely
+                                    String artistName = "Unknown Artist";
+                                    JSONArray artistsArray = trackJson.optJSONArray("artists");
+                                    if (artistsArray != null && artistsArray.length() > 0) {
+                                        JSONObject artistObj = artistsArray.optJSONObject(0);
+                                        if (artistObj != null) {
+                                            artistName = artistObj.optString("name", "Unknown Artist");
+                                        }
+                                    }
+
+                                    // Grab ALBUM COVER Safely
+                                    String imageUrl = "";
+                                    JSONObject albumObject = trackJson.optJSONObject("album");
+                                    if (albumObject != null) {
+                                        JSONArray imagesArray = albumObject.optJSONArray("images");
+                                        if (imagesArray != null && imagesArray.length() > 0) {
+                                            JSONObject imageObj = imagesArray.optJSONObject(0);
+                                            if (imageObj != null) {
+                                                imageUrl = imageObj.optString("url", "");
+                                            }
+                                        }
+                                    }
+
+                                    Artist artist = new Artist(artistName, "");
+                                    ImageUri imageUri = new ImageUri(imageUrl);
+                                    Track track = new Track(artist, null, null, 0, trackName, trackUri, imageUri, false, false);
+
+                                    tracksList.add(track);
+                                }
                             }
                         }
-
-                        Artist artist = new Artist(artistName, "");
-                        ImageUri imageUri = new ImageUri(imageUrl);
-                        Track track = new Track(artist, null, null, 0, trackName, trackUri, imageUri, false, false);
-
-                        tracksList.add(track);
+                        Log.d("SpotifyRepo", "Successfully fetched " + tracksList.size() + " songs!");
                     }
 
-                    Log.d("SpotifyRepo", "Successfully fetched " + tracksList.size() + " songs!");
-
                 } else {
-                    Log.e("SpotifyRepo", "API Call failed with response code: " + responseCode);
+                    // FIXED: Read error stream
+                    try (InputStream errorStream = conn.getErrorStream();
+                         Scanner scanner = new Scanner(errorStream).useDelimiter("\\A")) {
+                        String errorBody = scanner.hasNext() ? scanner.next() : "No error body";
+                        Log.e("SpotifyRepo", "API Call failed: " + responseCode + " - " + errorBody);
+                    }
                 }
 
             } catch (Exception e) {
                 Log.e("SpotifyRepo", "Network error fetching songs", e);
-                e.printStackTrace();
+            } finally {
+                // FIXED: Disconnect
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
         } else {
             Log.e("SpotifyRepo", "No token available to fetch songs.");
@@ -111,20 +133,16 @@ public class SpotifyRepository {
     }
 
     public List<Track> getSearchedSongs(String query) {
-        String token = tokenManager.getBestAvailableToken();
+        String token = tokenManager.getAppToken();
         List<Track> tracksList = new ArrayList<>();
 
         if (token != null && query != null && !query.trim().isEmpty()) {
+            HttpURLConnection conn = null; // FIXED
             try {
                 String encodedQuery = java.net.URLEncoder.encode(query.trim(), "UTF-8");
                 URL url = new URL("https://api.spotify.com/v1/search?q=" + encodedQuery + "&type=track&limit=10");
 
-                Log.d("SEARCH_QUERY", "Raw: " + query);
-                Log.d("SEARCH_QUERY", "Encoded: " + encodedQuery);
-                Log.d("SEARCH_URL", url.toString());
-                Log.d("TOKEN_TYPE", token.substring(0, 20));
-
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Authorization", "Bearer " + token);
                 conn.setRequestProperty("Content-Type", "application/json");
@@ -132,50 +150,75 @@ public class SpotifyRepository {
                 int responseCode = conn.getResponseCode();
                 if (responseCode == HttpURLConnection.HTTP_OK) {
 
-                    InputStream is = conn.getInputStream();
-                    Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                    String responseBody = scanner.hasNext() ? scanner.next() : "";
-                    scanner.close();
+                    // FIXED: Auto-close streams
+                    try (InputStream is = conn.getInputStream();
+                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
 
-                    JSONObject jsonObject = new JSONObject(responseBody);
-                    JSONObject tracksObject = jsonObject.getJSONObject("tracks");
-                    JSONArray itemsArray = tracksObject.getJSONArray("items");
+                        String responseBody = scanner.hasNext() ? scanner.next() : "";
 
-                    Log.d("SpotifyRepo", "Search returned: " + itemsArray.length() + " items");
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        JSONObject tracksObject = jsonObject.optJSONObject("tracks");
 
-                    for (int i = 0; i < itemsArray.length(); i++) {
-                        JSONObject trackJson = itemsArray.getJSONObject(i);
+                        if (tracksObject != null) {
+                            JSONArray itemsArray = tracksObject.optJSONArray("items");
 
-                        String trackName = trackJson.getString("name");
-                        String trackUri = trackJson.getString("uri");
+                            if (itemsArray != null) {
+                                Log.d("SpotifyRepo", "Search returned: " + itemsArray.length() + " items");
 
-                        String artistName = "";
-                        JSONArray artistsArray = trackJson.getJSONArray("artists");
-                        if (artistsArray.length() > 0) {
-                            artistName = artistsArray.getJSONObject(0).getString("name");
-                        }
+                                for (int i = 0; i < itemsArray.length(); i++) {
+                                    JSONObject trackJson = itemsArray.optJSONObject(i);
+                                    if (trackJson == null) continue;
 
-                        String imageUrl = "";
-                        JSONObject albumObject = trackJson.optJSONObject("album");
-                        if (albumObject != null) {
-                            JSONArray imagesArray = albumObject.optJSONArray("images");
-                            if (imagesArray != null && imagesArray.length() > 0) {
-                                imageUrl = imagesArray.getJSONObject(0).getString("url");
+                                    // FIXED: Using optString and optJSONArray for safety
+                                    String trackName = trackJson.optString("name", "Unknown Track");
+                                    String trackUri = trackJson.optString("uri", "");
+
+                                    String artistName = "Unknown Artist";
+                                    JSONArray artistsArray = trackJson.optJSONArray("artists");
+                                    if (artistsArray != null && artistsArray.length() > 0) {
+                                        JSONObject artistObj = artistsArray.optJSONObject(0);
+                                        if (artistObj != null) {
+                                            artistName = artistObj.optString("name", "Unknown Artist");
+                                        }
+                                    }
+
+                                    String imageUrl = "";
+                                    JSONObject albumObject = trackJson.optJSONObject("album");
+                                    if (albumObject != null) {
+                                        JSONArray imagesArray = albumObject.optJSONArray("images");
+                                        if (imagesArray != null && imagesArray.length() > 0) {
+                                            JSONObject imageObj = imagesArray.optJSONObject(0);
+                                            if (imageObj != null) {
+                                                imageUrl = imageObj.optString("url", "");
+                                            }
+                                        }
+                                    }
+
+                                    Artist artist = new Artist(artistName, "");
+                                    ImageUri imageUri = new ImageUri(imageUrl);
+                                    Track track = new Track(artist, null, null, 0, trackName, trackUri, imageUri, false, false);
+
+                                    tracksList.add(track);
+                                }
                             }
                         }
-
-                        Artist artist = new Artist(artistName, "");
-                        ImageUri imageUri = new ImageUri(imageUrl);
-                        Track track = new Track(artist, null, null, 0, trackName, trackUri, imageUri, false, false);
-
-                        tracksList.add(track);
                     }
                 } else {
-                    Log.e("SpotifyRepo", "Search API Call failed: " + responseCode);
+                    // FIXED: Read error stream
+                    try (InputStream errorStream = conn.getErrorStream();
+                         Scanner scanner = new Scanner(errorStream).useDelimiter("\\A")) {
+                        String errorBody = scanner.hasNext() ? scanner.next() : "No error body";
+                        Log.e("SpotifyRepo", "Search API Call failed: " + responseCode + " - " + errorBody);
+                    }
                 }
 
             } catch (Exception e) {
                 Log.e("SpotifyRepo", "Network error during search", e);
+            } finally {
+                // FIXED: Disconnect
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
         }
         return tracksList;

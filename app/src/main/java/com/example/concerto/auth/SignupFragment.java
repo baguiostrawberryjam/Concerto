@@ -30,7 +30,6 @@ public class SignupFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         initViewModels();
         setupButtons();
     }
@@ -66,30 +65,32 @@ public class SignupFragment extends Fragment {
         authViewModel.signup(email, pass, username, new AuthViewModel.SignupCallback() {
             @Override
             public void onSuccess() {
-                Toast.makeText(requireContext(), "Account created successfully!", Toast.LENGTH_SHORT).show();
+                // FIXED: Safety check before context use
+                if (!isAdded() || getActivity() == null || getActivity().isFinishing()) return;
 
+                Toast.makeText(requireContext(), "Account created successfully!", Toast.LENGTH_SHORT).show();
                 authViewModel.logoutSpotify();
 
-                if (isAdded() && getActivity() != null && !getActivity().isFinishing()) {
-
-                    View bottomNav = requireActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setVisibility(View.VISIBLE);
-                    }
-
-                    requireActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.layoutFragmentContainer, new DashboardFragment())
-                            .commit();
-
-                    requireActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
-                            .commit();
+                View bottomNav = getActivity().findViewById(R.id.bottomNav);
+                if (bottomNav != null) {
+                    bottomNav.setVisibility(View.VISIBLE);
                 }
+
+                // FIXED: commitAllowingStateLoss prevents crashes if app is backgrounded
+                getActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.layoutFragmentContainer, new DashboardFragment())
+                        .commitAllowingStateLoss();
+
+                getActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
+                        .commitAllowingStateLoss();
             }
 
             @Override
             public void onError(String errorMessage) {
-                Toast.makeText(requireContext(), "Sign Up Failed: " + errorMessage, Toast.LENGTH_LONG).show();
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Sign Up Failed: " + errorMessage, Toast.LENGTH_LONG).show();
+                }
             }
         });
     }

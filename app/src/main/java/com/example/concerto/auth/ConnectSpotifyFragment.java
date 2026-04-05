@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.concerto.R;
 import com.example.concerto.databinding.FragmentConnectSpotifyBinding;
 import com.example.concerto.spotify.SpotifyConfig;
 import com.example.concerto.utils.PKCEUtil;
@@ -33,6 +34,7 @@ public class ConnectSpotifyFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        hideNavBar();
         initViewModels();
         setupObservers();
         setupButtons();
@@ -41,7 +43,26 @@ public class ConnectSpotifyFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        showNavBar();
         bind = null;
+    }
+
+    private void hideNavBar() {
+        if (getActivity() != null) {
+            View bottomNav = getActivity().findViewById(R.id.bottomNav);
+            if (bottomNav != null) {
+                bottomNav.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void showNavBar() {
+        if (getActivity() != null) {
+            View bottomNav = getActivity().findViewById(R.id.bottomNav);
+            if (bottomNav != null) {
+                bottomNav.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     private void initViewModels() {
@@ -50,9 +71,10 @@ public class ConnectSpotifyFragment extends Fragment {
 
     private void setupObservers() {
         authViewModel.getSpotifyToken().observe(getViewLifecycleOwner(), token -> {
-            if (token != null) {
+            // FIXED: Ensure fragment is attached before interacting with Context or FragmentManager
+            if (token != null && !token.equals("") && isAdded() && getActivity() != null) {
                 Toast.makeText(requireContext(), "Spotify Connected successfully!", Toast.LENGTH_SHORT).show();
-                requireActivity().getSupportFragmentManager().popBackStack();
+                getActivity().getSupportFragmentManager().popBackStack();
             }
         });
     }
@@ -61,7 +83,9 @@ public class ConnectSpotifyFragment extends Fragment {
         bind.btnSpotifyLogin.setOnClickListener(v -> startSpotifyLogin());
 
         bind.btnCancel.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager().popBackStack();
+            if (getActivity() != null) {
+                getActivity().getSupportFragmentManager().popBackStack();
+            }
         });
     }
 

@@ -15,6 +15,7 @@ import com.example.concerto.dashboard.DashboardFragment;
 import com.example.concerto.R;
 import com.example.concerto.databinding.FragmentLoginBinding;
 import com.example.concerto.player.PlayerFragment;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class LoginFragment extends Fragment {
 
@@ -31,9 +32,7 @@ public class LoginFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         initViewModels();
-
         setupButtons();
     }
 
@@ -54,7 +53,7 @@ public class LoginFragment extends Fragment {
             requireActivity().getSupportFragmentManager().beginTransaction()
                     .replace(R.id.layoutFragmentContainer, new SignupFragment())
                     .addToBackStack(null)
-                    .commit();
+                    .commit(); // Normal commit is fine here because it's an instant button click
         });
     }
 
@@ -66,36 +65,44 @@ public class LoginFragment extends Fragment {
         authViewModel.login(email, password, new AuthViewModel.LoginCallback() {
             @Override
             public void onSuccess() {
-                Toast.makeText(requireContext(), "Logging in... checking Spotify connection", Toast.LENGTH_SHORT).show();
+                // FIXED: Ensure fragment is still attached before making UI calls
+                if (!isAdded()) return;
 
+                Toast.makeText(requireContext(), "Logging in... checking Spotify connection", Toast.LENGTH_SHORT).show();
                 Log.d("LoginProcess", "1. Auth success! Attempting to restore token...");
 
-                authViewModel.restoreSpotifyTokenFromFirebase(() -> {Log.d("LoginProcess", "2. Firebase Database check finished!");
+                authViewModel.restoreSpotifyTokenFromFirebase(() -> {
+                    Log.d("LoginProcess", "2. Firebase Database check finished!");
 
-                    if (getActivity() != null && !getActivity().isFinishing()) {
-                        Log.d("LoginProcess", "3. Navigating to Dashboard...");
-
-                        View bottomNav = requireActivity().findViewById(R.id.bottomNav);
-                        if (bottomNav != null) {
-                            bottomNav.setVisibility(View.VISIBLE);
-                        }
-
-                        requireActivity().getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.layoutFragmentContainer, new DashboardFragment())
-                                .commit();
-
-                        requireActivity().getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
-                                .commit();
-                    } else {
-                        Log.e("LoginProcess", "ERROR: Activity is null or finishing! Cannot navigate.");
+                    // FIXED: Strict attachment checks for async callbacks
+                    if (!isAdded() || getActivity() == null || getActivity().isFinishing()) {
+                        Log.e("LoginProcess", "ERROR: Activity is null, finishing, or detached! Cannot navigate.");
+                        return;
                     }
+
+                    Log.d("LoginProcess", "3. Navigating to Dashboard...");
+                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
+                    if (bottomNav != null) {
+                        bottomNav.setVisibility(View.VISIBLE);
+                        bottomNav.getMenu().findItem(R.id.nav_home).setChecked(true);
+                    }
+
+                    // FIXED: commitAllowingStateLoss prevents crashes if app is backgrounded
+                    getActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutFragmentContainer, new DashboardFragment())
+                            .commitAllowingStateLoss();
+
+                    getActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
+                            .commitAllowingStateLoss();
                 });
             }
 
             @Override
             public void onError(String errorMessage) {
-                Toast.makeText(requireContext(), "Authentication failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Authentication failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

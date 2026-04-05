@@ -14,6 +14,8 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.auth.LoginFragment;
 import com.example.concerto.concerto.ConcertoFragment;
+import com.example.concerto.concerto.ConcertoLobbyFragment;
+import com.example.concerto.concerto.ConcertoViewModel;
 import com.example.concerto.dashboard.DashboardFragment;
 import com.example.concerto.databinding.ActivityMainBinding;
 import com.example.concerto.player.PlayerFragment;
@@ -24,6 +26,7 @@ import com.spotify.sdk.android.auth.AuthorizationResponse;
 public class MainActivity extends AppCompatActivity {
 
     private AuthViewModel authViewModel;
+    private ConcertoViewModel concertoViewModel;
     private ActivityMainBinding bind;
 
     @Override
@@ -36,9 +39,10 @@ public class MainActivity extends AppCompatActivity {
 
         initViewModels();
         setupUI(savedInstanceState);
-        setupButtons(); // Handles Nav Bar clicks
+        setupButtons();
     }
 
+    // FIXED: Restored to catch the Spotify Authentication Callback
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -61,24 +65,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViewModels() {
         authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
+        concertoViewModel = new ViewModelProvider(this).get(ConcertoViewModel.class);
     }
 
     private void setupUI(Bundle savedInstanceState) {
         if (savedInstanceState == null) {
             if (authViewModel.isUserLoggedIn()) {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.layoutFragmentContainer, new DashboardFragment(), null)
-                        .commit();
+                authViewModel.restoreSpotifyTokenFromFirebase(() -> {
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutFragmentContainer, new DashboardFragment())
+                            .commitAllowingStateLoss();
 
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
-                        .commit();
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
+                            .commitAllowingStateLoss();
 
-                bind.bottomNav.setVisibility(View.VISIBLE);
+                    bind.bottomNav.setVisibility(View.VISIBLE);
+                });
             } else {
                 getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.layoutFragmentContainer, new LoginFragment(), null)
-                        .commit();
+                        .replace(R.id.layoutFragmentContainer, new LoginFragment())
+                        .commitAllowingStateLoss();
 
                 bind.bottomNav.setVisibility(View.GONE);
             }
@@ -93,9 +100,14 @@ public class MainActivity extends AppCompatActivity {
             if (itemId == R.id.nav_home) {
                 selectedFragment = new DashboardFragment();
             } else if (itemId == R.id.nav_search) {
-                selectedFragment = new SearchFragment(); // Next feature!
+                selectedFragment = new SearchFragment();
             } else if (itemId == R.id.nav_concerto) {
-                selectedFragment = new ConcertoFragment();
+                boolean isInActiveConcerto = concertoViewModel.getActiveSessionPin().getValue() != null;
+                if (isInActiveConcerto) {
+                    selectedFragment = new ConcertoFragment();
+                } else {
+                    selectedFragment = new ConcertoLobbyFragment();
+                }
             } else if (itemId == R.id.nav_profile) {
                 selectedFragment = new ProfileFragment();
             }
@@ -103,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
             if (selectedFragment != null) {
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.layoutFragmentContainer, selectedFragment)
-                        .commit();
+                        .commitAllowingStateLoss();
                 return true;
             }
             return false;

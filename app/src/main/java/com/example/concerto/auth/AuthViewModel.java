@@ -12,19 +12,21 @@ import com.example.concerto.spotify.SpotifyAppTokenManager;
 
 public class AuthViewModel extends AndroidViewModel {
 
+    // State Holders (LiveData)
     private final MutableLiveData<String> spotifyToken = new MutableLiveData<>();
-    private final SpotifyAppTokenManager tokenManager;
     private final MutableLiveData<String> codeVerifier = new MutableLiveData<>();
 
+    // Managers
+    private final SpotifyAppTokenManager tokenManager;
     private final AuthManager authManager;
 
     public AuthViewModel(@NonNull Application application) {
         super(application);
-        tokenManager = SpotifyAppTokenManager.getInstance(application);
-
-        authManager = new AuthManager(tokenManager);
+        this.tokenManager = SpotifyAppTokenManager.getInstance(application);
+        this.authManager = new AuthManager(tokenManager);
     }
 
+    // --- Interfaces ---
     public interface LoginCallback {
         void onSuccess();
         void onError(String errorMessage);
@@ -35,27 +37,35 @@ public class AuthViewModel extends AndroidViewModel {
         void onError(String errorMessage);
     }
 
+    // --- Getters & Setters ---
     public String getCurrentUsername() {
         return authManager.getCurrentUsername();
-    }
-
-    public void setSpotifyToken(String token) {
-        spotifyToken.postValue(token);
-        tokenManager.setUserToken(token); // Update memory cache ONLY!
     }
 
     public LiveData<String> getSpotifyToken() {
         return spotifyToken;
     }
 
+    public void setSpotifyToken(String token) {
+        // FIXED: Always use postValue for thread safety
+        spotifyToken.postValue(token);
+        tokenManager.setUserToken(token); // Update memory cache
+    }
+
     public void setCodeVerifier(String verifier) {
-        codeVerifier.setValue(verifier);
+        // FIXED: Always use postValue for thread safety
+        codeVerifier.postValue(verifier);
     }
 
     public String getCodeVerifier() {
         return codeVerifier.getValue();
     }
 
+    public boolean isUserLoggedIn() {
+        return authManager.isUserLoggedIn();
+    }
+
+    // --- Core Auth Actions ---
     public void login(String email, String password, LoginCallback callback) {
         authManager.loginWithEmailAndPassword(email, password, new AuthManager.LoginListener() {
             @Override
@@ -84,9 +94,13 @@ public class AuthViewModel extends AndroidViewModel {
         });
     }
 
+    // --- Logout Handling ---
     public void logoutFull() {
         authManager.logoutFirebase();
-        logoutSpotify(); // We call the existing Spotify logout method here!
+        logoutSpotify();
+
+        // FIXED: Wipe volatile state to prevent ghost data for the next user
+        codeVerifier.postValue(null);
     }
 
     public void logoutSpotify() {
@@ -94,16 +108,26 @@ public class AuthViewModel extends AndroidViewModel {
         tokenManager.clearUserToken();
     }
 
+    // --- Spotify Token Management ---
     public void restoreSpotifyTokenFromFirebase(Runnable onComplete) {
         authManager.restoreSpotifyTokenFromFirebase(new AuthManager.TokenRestoreListener() {
+
+            // We use an array so it can be mutated safely inside the inner class callbacks
+            final boolean[] tokenReceived = {false};
+
             @Override
             public void onSuccess(String token) {
+                tokenReceived[0] = true;
                 setSpotifyToken(token);
             }
 
             @Override
             public void onComplete() {
                 if (onComplete != null) {
+                    // If no token was found/restored, explicitly set an empty string to trigger observers
+                    if (!tokenReceived[0]) {
+                        setSpotifyToken("");
+                    }
                     onComplete.run();
                 }
             }
@@ -121,11 +145,8 @@ public class AuthViewModel extends AndroidViewModel {
             @Override
             public void onError(String errorMessage) {
                 Log.e("SpotifyAuth", "Token exchange failed: " + errorMessage);
+                // Optional: You could post an error LiveData here if the UI needs to show a Toast
             }
         });
-    }
-
-    public boolean isUserLoggedIn() {
-        return authManager.isUserLoggedIn();
     }
 }

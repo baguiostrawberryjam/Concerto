@@ -4,21 +4,21 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="12dp"
-    android:layout_marginBottom="8dp"
-    android:background="#1E1E1E"
+    android:layout_marginBottom="2dp"
     android:gravity="center_vertical"
-
-    android:foreground="?attr/selectableItemBackground"
+    android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
     <ImageView
         android:id="@+id/ivAlbumCover"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
         android:scaleType="centerCrop"
-        android:background="#333333"
-        android:contentDescription="Album Cover" />
+        android:contentDescription="Album Cover"
+        android:src="@drawable/img_album_placeholder"
+        android:background="@drawable/bg_rounded_corner_small"
+        android:clipToOutline="true"/>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -34,8 +34,9 @@
             android:layout_height="wrap_content"
             android:text="Song Title"
             android:textColor="#FFFFFF"
+            android:textStyle="bold
+"
             android:textSize="16sp"
-            android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end" />
 
@@ -48,16 +49,17 @@
             android:textSize="14sp"
             android:maxLines="1"
             android:ellipsize="end"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="2dp" />
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/btnPlay"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@android:drawable/ic_media_play"
+        android:src="@drawable/ic_button_upvote"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Play Song"
-        android:tint="#FFFFFF" />
+        android:contentDescription="Action"
+        android:tint="#FFFFFF"
+        android:visibility="gone"/>
 
 </LinearLayout>

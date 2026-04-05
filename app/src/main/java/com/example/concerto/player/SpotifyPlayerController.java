@@ -10,8 +10,9 @@ import com.spotify.android.appremote.api.SpotifyAppRemote;
 public class SpotifyPlayerController {
 
     private SpotifyAppRemote appRemote;
-    private Context context;
+    private final Context context;
 
+    // Guaranteed to use Application context to prevent Activity memory leaks
     public SpotifyPlayerController(Context context) {
         this.context = context.getApplicationContext();
     }
@@ -50,21 +51,23 @@ public class SpotifyPlayerController {
     }
 
     public void play(String uri) {
-        if (isReady()) {
-            appRemote.getPlayerApi().play(uri);
-        }
+        if (isReady()) appRemote.getPlayerApi().play(uri);
     }
 
     public void pause() {
-        if (isReady()) {
-            appRemote.getPlayerApi().pause();
-        }
+        if (isReady()) appRemote.getPlayerApi().pause();
+    }
+
+    public void skipNext() {
+        if (isReady()) appRemote.getPlayerApi().skipNext();
+    }
+
+    public void skipPrevious() {
+        if (isReady()) appRemote.getPlayerApi().skipPrevious();
     }
 
     public void resume() {
-        if (isReady()) {
-            appRemote.getPlayerApi().resume();
-        }
+        if (isReady()) appRemote.getPlayerApi().resume();
     }
 
     public void disconnect() {
@@ -75,15 +78,11 @@ public class SpotifyPlayerController {
     }
 
     public void seekTo(long positionMs) {
-        if (isReady()) {
-            appRemote.getPlayerApi().seekTo(positionMs);
-        }
+        if (isReady()) appRemote.getPlayerApi().seekTo(positionMs);
     }
 
     public void getPlayerState(com.spotify.protocol.client.CallResult.ResultCallback<com.spotify.protocol.types.PlayerState> callback) {
-        if (isReady()) {
-            appRemote.getPlayerApi().getPlayerState().setResultCallback(callback);
-        }
+        if (isReady()) appRemote.getPlayerApi().getPlayerState().setResultCallback(callback);
     }
 
     public void subscribeToPlayerState(PlayerStateListener listener) {
@@ -104,15 +103,14 @@ public class SpotifyPlayerController {
         appRemote.getImagesApi()
                 .getImage(imageUri)
                 .setResultCallback(bitmap -> {
-                    if (listener != null) {
-                        listener.onImageLoaded(bitmap);
-                    }
+                    if (listener != null) listener.onImageLoaded(bitmap);
                 });
     }
 
     public void playOrConnect(String uri, ConnectionListener listener) {
         if (isReady()) {
             play(uri);
+            if (listener != null) listener.onConnected();
         } else {
             connect(new ConnectionListener() {
                 @Override
@@ -129,9 +127,7 @@ public class SpotifyPlayerController {
         }
     }
 
-    // HELPER METHODS
     public boolean isReady() {
         return appRemote != null && appRemote.isConnected();
     }
-
 }

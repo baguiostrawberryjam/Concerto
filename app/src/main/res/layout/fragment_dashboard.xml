@@ -31,16 +31,6 @@
             android:layout_marginEnd="4dp"
             android:visibility="gone"/>
 
-        <Button
-            android:id="@+id/btnLogout"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/action_logout"
-            style="?android:attr/borderlessButtonStyle"
-            android:textColor="@color/error"
-            android:layout_marginStart="4dp"/>
-
     </LinearLayout>
 
     <ProgressBar
@@ -51,7 +41,7 @@
         android:visibility="gone"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvTracks"
+        android:id="@+id/rvDashboardTracks"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scrollbars="vertical"

@@ -48,7 +48,7 @@ public class SpotifyAppTokenManager {
 
         if (newToken != null) {
             cachedAppToken = newToken;
-
+            // Expire 60 seconds early to prevent edge-case failures
             appTokenExpiry = System.currentTimeMillis() + ((3600 - 60) * 1000);
         }
 
@@ -60,9 +60,11 @@ public class SpotifyAppTokenManager {
     }
 
     private String fetchNewAppTokenFromNetwork() {
+        HttpURLConnection conn = null;
         try {
-            URL url = new URL("https://accounts." + "spotify.com/api/token");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            // FIXED: Using standard Spotify Auth Endpoint
+            URL url = new URL("https://accounts.spotify.com/api/token");
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
@@ -72,33 +74,49 @@ public class SpotifyAppTokenManager {
             conn.setDoOutput(true);
 
             String body = "grant_type=client_credentials";
-            OutputStream os = conn.getOutputStream();
-            os.write(body.getBytes());
-            os.flush();
-            os.close();
 
-            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                InputStream is = conn.getInputStream();
-                Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                String responseBody = scanner.hasNext() ? scanner.next() : "";
-                scanner.close();
+            // FIXED: try-with-resources auto-closes the OutputStream
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body.getBytes());
+                os.flush();
+            }
 
-                JSONObject jsonObject = new JSONObject(responseBody);
-                Log.d("SpotifyAuth", "Successfully fetched App Token!");
-                return jsonObject.getString("access_token");
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // FIXED: try-with-resources auto-closes the InputStream and Scanner
+                try (InputStream is = conn.getInputStream();
+                     Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
+                    String responseBody = scanner.hasNext() ? scanner.next() : "";
+
+                    JSONObject jsonObject = new JSONObject(responseBody);
+                    Log.d("SpotifyAuth", "Successfully fetched App Token!");
+                    return jsonObject.getString("access_token");
+                }
             } else {
-                Log.e("SpotifyAuth", "Failed to fetch App Token: " + conn.getResponseCode());
+                // FIXED: Read the error stream to see Spotify's exact complaint
+                try (InputStream errorStream = conn.getErrorStream();
+                     Scanner scanner = new Scanner(errorStream).useDelimiter("\\A")) {
+                    String errorBody = scanner.hasNext() ? scanner.next() : "No error body";
+                    Log.e("SpotifyAuth", "Failed to fetch App Token: " + responseCode + " - " + errorBody);
+                }
             }
         } catch (Exception e) {
             Log.e("SpotifyAuth", "Network error fetching App Token", e);
+        } finally {
+            // FIXED: Guarantee the connection is closed to prevent socket leaks
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return null;
     }
 
     public String[] refreshAccessToken(String refreshToken) {
+        HttpURLConnection conn = null;
         try {
+            // FIXED: Using standard Spotify Auth Endpoint
             URL url = new URL("https://accounts.spotify.com/api/token");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setDoOutput(true);
@@ -107,31 +125,42 @@ public class SpotifyAppTokenManager {
                     "&refresh_token=" + java.net.URLEncoder.encode(refreshToken, "UTF-8") +
                     "&client_id=" + SpotifyConfig.CLIENT_ID;
 
-            OutputStream os = conn.getOutputStream();
-            os.write(body.getBytes());
-            os.flush();
-            os.close();
+            // FIXED: try-with-resources auto-closes the OutputStream
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body.getBytes());
+                os.flush();
+            }
 
-            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                InputStream is = conn.getInputStream();
-                Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                String responseBody = scanner.hasNext() ? scanner.next() : "";
-                scanner.close();
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                // FIXED: try-with-resources auto-closes the InputStream and Scanner
+                try (InputStream is = conn.getInputStream();
+                     Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
+                    String responseBody = scanner.hasNext() ? scanner.next() : "";
 
-                JSONObject jsonObject = new JSONObject(responseBody);
-                Log.d("SpotifyAuth", "Successfully refreshed User Token in the background!");
+                    JSONObject jsonObject = new JSONObject(responseBody);
+                    Log.d("SpotifyAuth", "Successfully refreshed User Token in the background!");
 
-                String newAccessToken = jsonObject.getString("access_token");
-                // If Spotify provides a new refresh token, grab it. Otherwise, keep using the old one.
-                String newRefreshToken = jsonObject.optString("refresh_token", refreshToken);
+                    String newAccessToken = jsonObject.getString("access_token");
+                    String newRefreshToken = jsonObject.optString("refresh_token", refreshToken);
 
-                // Return both tokens to the AuthManager
-                return new String[]{newAccessToken, newRefreshToken};
+                    return new String[]{newAccessToken, newRefreshToken};
+                }
             } else {
-                Log.e("SpotifyAuth", "Failed to refresh User Token: " + conn.getResponseCode());
+                // FIXED: Read the error stream
+                try (InputStream errorStream = conn.getErrorStream();
+                     Scanner scanner = new Scanner(errorStream).useDelimiter("\\A")) {
+                    String errorBody = scanner.hasNext() ? scanner.next() : "No error body";
+                    Log.e("SpotifyAuth", "Failed to refresh User Token: " + responseCode + " - " + errorBody);
+                }
             }
         } catch (Exception e) {
             Log.e("SpotifyAuth", "Network error refreshing User Token", e);
+        } finally {
+            // FIXED: Guarantee the connection is closed
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return null;
     }

@@ -13,7 +13,6 @@ import android.widget.Toast;
 import com.example.concerto.R;
 import com.example.concerto.adapters.TrackAdapter;
 import com.example.concerto.auth.AuthViewModel;
-import com.example.concerto.auth.LoginFragment;
 import com.example.concerto.databinding.FragmentDashboardBinding;
 import com.example.concerto.player.PlayerViewModel;
 import com.example.concerto.auth.ConnectSpotifyFragment;
@@ -41,7 +40,7 @@ public class DashboardFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         initViewModels();
-        setupUI();
+        setupRecyclerView();
         setupObservers();
         setupButtons();
     }
@@ -49,45 +48,45 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        bind = null; // Prevent memory leaks
+        bind = null;
     }
 
+    // ==========================================
+    // INITIALIZATION METHODS
+    // ==========================================
+
     private void initViewModels() {
+        if (getActivity() == null) return;
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class);
         playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
     }
 
-    private void setupUI() {
-        trackAdapter = new TrackAdapter((track, canPlay) -> {
-            if (canPlay) {
-                Toast.makeText(requireContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
+    private void setupRecyclerView() {
+        trackAdapter = new TrackAdapter((track, canPlayMusic) -> {
+            if (canPlayMusic) {
                 playerViewModel.playTrack(track.uri);
-                playerViewModel.expandPlayer();
+                playerViewModel.setDisplayInfo(track.name, track.artist != null ? track.artist.name : "Unknown Artist", track.imageUri != null ? track.imageUri.raw : "");
             } else {
-                Toast.makeText(requireContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
-                requireActivity().getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
-                        .addToBackStack(null)
-                        .commit();
+                if (isAdded() && getActivity() != null) {
+                    Toast.makeText(requireContext(), "Connect Spotify to play music", Toast.LENGTH_SHORT).show();
+                    getActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
+                            .addToBackStack(null)
+                            .commitAllowingStateLoss();
+                }
             }
         });
 
-        bind.rvTracks.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(requireContext()));
-        bind.rvTracks.setAdapter(trackAdapter);
-
-        String username = authViewModel.getCurrentUsername();
-        if (username != null) {
-            bind.tvWelcomeMessage.setText("Welcome, " + username + "!");
-        } else {
-            bind.tvWelcomeMessage.setText("Welcome to your Dashboard!");
-        }
-
+        bind.rvDashboardTracks.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(requireContext()));
+        bind.rvDashboardTracks.setAdapter(trackAdapter);
         bind.progressBar.setVisibility(View.VISIBLE);
     }
 
     private void setupObservers() {
         dashboardViewModel.getSongs().observe(getViewLifecycleOwner(), songs -> {
+            if (!isAdded() || bind == null) return;
+
             bind.progressBar.setVisibility(View.GONE);
             if (songs != null && !songs.isEmpty()) {
                 trackAdapter.setTracks(songs);
@@ -97,13 +96,20 @@ public class DashboardFragment extends Fragment {
         });
 
         authViewModel.getSpotifyToken().observe(getViewLifecycleOwner(), token -> {
-            boolean isConnected = (token != null && !token.trim().isEmpty());
+            if (!isAdded() || bind == null) return;
 
+            boolean isConnected = (token != null && !token.trim().isEmpty());
             trackAdapter.setCanPlayMusic(isConnected);
             bind.btnConnectSpotify.setVisibility(isConnected ? View.GONE : View.VISIBLE);
 
-            if (isConnected && trackAdapter.getItemCount() == 0) {
+            if (trackAdapter.getItemCount() == 0) {
                 dashboardViewModel.loadRandomSongs();
+            }
+        });
+
+        playerViewModel.getCurrentPlayingUri().observe(getViewLifecycleOwner(), uri -> {
+            if (trackAdapter != null) {
+                trackAdapter.setCurrentPlayingUri(uri);
             }
         });
 
@@ -114,34 +120,12 @@ public class DashboardFragment extends Fragment {
 
     private void setupButtons() {
         bind.btnConnectSpotify.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
-
-        bind.btnLogout.setOnClickListener(v -> {
-            playerViewModel.pausePlayer();
-
-            View bottomNav = requireActivity().findViewById(R.id.bottomNav);
-            if (bottomNav != null) {
-                bottomNav.setVisibility(View.GONE);
+            if (isAdded() && getActivity() != null) {
+                getActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
+                        .addToBackStack(null)
+                        .commitAllowingStateLoss();
             }
-
-            Fragment playerFragment = requireActivity().getSupportFragmentManager().findFragmentByTag("PLAYER");
-            if (playerFragment != null) {
-                requireActivity().getSupportFragmentManager().beginTransaction()
-                        .remove(playerFragment)
-                        .commit();
-            }
-
-            authViewModel.logoutFull();
-
-            requireActivity().getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
-
-            requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.layoutFragmentContainer, new LoginFragment())
-                    .commit();
         });
     }
 }

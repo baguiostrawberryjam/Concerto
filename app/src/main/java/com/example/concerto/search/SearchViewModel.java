@@ -48,6 +48,7 @@ public class SearchViewModel extends AndroidViewModel {
         isLoadingLiveData.setValue(true); // Tell UI to show progress bar
 
         executorService.execute(() -> {
+            // This safely uses the Repository and Token Manager we just made crash-proof!
             List<Track> songs = spotifyRepository.getSearchedSongs(query);
 
             searchResultsLiveData.postValue(songs);
@@ -57,5 +58,14 @@ public class SearchViewModel extends AndroidViewModel {
 
     public void checkPlayPermission() {
         canPlayMusicLiveData.setValue(tokenManager.hasUserToken());
+    }
+
+    // --- FIXED: Prevent Memory Leaks by shutting down the background thread ---
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 }

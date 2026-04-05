@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-// Change to AndroidViewModel
 public class DashboardViewModel extends AndroidViewModel {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -24,7 +23,6 @@ public class DashboardViewModel extends AndroidViewModel {
     private final SpotifyRepository spotifyRepository;
     private final SpotifyAppTokenManager tokenManager;
 
-    // Android automatically provides the Application parameter
     public DashboardViewModel(@NonNull Application application) {
         super(application);
         this.spotifyRepository = SpotifyRepository.getInstance(application);
@@ -46,5 +44,14 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public boolean canPlayMusic() {
         return tokenManager.hasUserToken();
+    }
+
+    // --- FIXED: Prevent Memory Leaks by shutting down the background thread ---
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 }

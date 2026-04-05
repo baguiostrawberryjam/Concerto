@@ -1,10 +1,12 @@
 package com.example.concerto.search;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.concerto.R;
 import com.example.concerto.adapters.TrackAdapter;
+import com.example.concerto.concerto.ConcertoViewModel;
 import com.example.concerto.databinding.FragmentSearchBinding;
 import com.example.concerto.player.PlayerViewModel;
 import com.example.concerto.auth.ConnectSpotifyFragment;
@@ -24,6 +27,7 @@ public class SearchFragment extends Fragment {
     private FragmentSearchBinding bind;
     private SearchViewModel searchViewModel;
     private PlayerViewModel playerViewModel;
+    private ConcertoViewModel concertoViewModel;
     private TrackAdapter trackAdapter;
 
     public static SearchFragment newInstance() {
@@ -42,7 +46,7 @@ public class SearchFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         initViewModels();
-        setupUI();
+        setupRecyclerView();
         setupObservers();
         setupButtons();
     }
@@ -50,70 +54,75 @@ public class SearchFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        bind = null; // Prevent memory leaks
+        bind = null;
     }
+
+    // ==========================================
+    // INITIALIZATION METHODS
+    // ==========================================
 
     private void initViewModels() {
-        // Scoped to this fragment
+        if (getActivity() == null) return;
         searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
-        // Scoped to the Activity so it can share commands with the PlayerFragment
         playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
+        concertoViewModel = new ViewModelProvider(requireActivity()).get(ConcertoViewModel.class);
     }
 
-    private void setupUI() {
-        // We reuse the exact same adapter logic from the Dashboard!
-        trackAdapter = new TrackAdapter((track, canPlay) -> {
-            if (canPlay) {
-                Toast.makeText(requireContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
-                playerViewModel.playTrack(track.uri);
-                playerViewModel.expandPlayer();
+    private void setupRecyclerView() {
+        trackAdapter = new TrackAdapter((track, canPlayMusic) -> {
+            String activePin = concertoViewModel.getActiveSessionPin().getValue();
+            if (activePin != null) {
+                concertoViewModel.addTrackToQueue(track);
+                if (isAdded() && getActivity() != null) {
+                    Toast.makeText(requireContext(), "Adding to Concerto queue...", Toast.LENGTH_SHORT).show();
+                    getActivity().findViewById(R.id.bottomNav).performClick(); // Re-select Concerto to go back
+                }
             } else {
-                Toast.makeText(requireContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
-                requireActivity().getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
-                        .addToBackStack(null)
-                        .commit();
+                if (canPlayMusic) {
+                    playerViewModel.playTrack(track.uri);
+                    playerViewModel.setDisplayInfo(track.name, track.artist != null ? track.artist.name : "Unknown Artist", track.imageUri != null ? track.imageUri.raw : "");
+                } else {
+                    if (isAdded() && getActivity() != null) {
+                        Toast.makeText(requireContext(), "Connect Spotify to play music", Toast.LENGTH_SHORT).show();
+                        getActivity().getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
+                                .addToBackStack(null)
+                                .commitAllowingStateLoss();
+                    }
+                }
             }
         });
 
-        bind.rvSearchResults.setLayoutManager(new LinearLayoutManager(requireContext()));
-        bind.rvSearchResults.setAdapter(trackAdapter);
+        bind.rvSearchTracks.setLayoutManager(new LinearLayoutManager(requireContext()));
+        bind.rvSearchTracks.setAdapter(trackAdapter);
     }
 
     private void setupObservers() {
-        // 1. Observe Network Loading State
         searchViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
+            if (!isAdded() || bind == null) return;
             bind.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            if (isLoading) {
-                bind.tvEmptyState.setVisibility(View.GONE);
-                bind.rvSearchResults.setVisibility(View.GONE);
-            }
         });
 
-        // 2. Observe the Search Results
-        searchViewModel.getSearchResults().observe(getViewLifecycleOwner(), tracks -> {
-            if (tracks != null && !tracks.isEmpty()) {
-                trackAdapter.setTracks(tracks);
-                bind.rvSearchResults.setVisibility(View.VISIBLE);
-                bind.tvEmptyState.setVisibility(View.GONE);
+        searchViewModel.getSearchResults().observe(getViewLifecycleOwner(), songs -> {
+            if (!isAdded() || bind == null) return;
+            if (songs != null && !songs.isEmpty()) {
+                trackAdapter.setTracks(songs);
             } else {
-                bind.rvSearchResults.setVisibility(View.GONE);
-                bind.tvEmptyState.setVisibility(View.VISIBLE);
-                bind.tvEmptyState.setText("No results found. Try another search.");
+                Toast.makeText(requireContext(), "No results found. Try another search.", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // 3. Observe Playback Permissions (Did they connect Spotify?)
         searchViewModel.getCanPlayMusic().observe(getViewLifecycleOwner(), canPlay -> {
-            trackAdapter.setCanPlayMusic(canPlay);
+            if (trackAdapter != null) trackAdapter.setCanPlayMusic(canPlay);
+        });
+
+        playerViewModel.getCurrentPlayingUri().observe(getViewLifecycleOwner(), uri -> {
+            if (trackAdapter != null) trackAdapter.setCurrentPlayingUri(uri);
         });
     }
 
     private void setupButtons() {
-        // Handle physical button click
         bind.btnSearch.setOnClickListener(v -> executeSearch());
-
-        // Handle the "Enter/Search" key on the software keyboard
         bind.etSearchQuery.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 executeSearch();
@@ -123,15 +132,24 @@ public class SearchFragment extends Fragment {
         });
     }
 
+    // ==========================================
+    // HELPER METHODS
+    // ==========================================
+
     private void executeSearch() {
+        if (bind == null || !isAdded()) return;
+
         String query = bind.etSearchQuery.getText().toString().trim();
         if (!query.isEmpty()) {
             searchViewModel.loadSearchedSongs(query);
 
-            // Hide the keyboard after searching
-            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(bind.etSearchQuery.getWindowToken(), 0);
+            // FIXED: Safe Context Check for Keyboard Manager
+            Context context = getContext();
+            if (context != null) {
+                InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(bind.etSearchQuery.getWindowToken(), 0);
+                }
             }
         } else {
             Toast.makeText(requireContext(), "Please enter a search term", Toast.LENGTH_SHORT).show();

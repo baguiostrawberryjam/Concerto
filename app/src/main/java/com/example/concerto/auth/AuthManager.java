@@ -121,7 +121,10 @@ public class AuthManager {
         db.get().addOnCompleteListener(task -> {
             if (task.isSuccessful() && task.getResult().exists()) {
                 DataSnapshot snapshot = task.getResult();
-                String accessToken = snapshot.child("accessToken").getValue(String.class);
+
+                Object accessObj = snapshot.child("accessToken").getValue();
+                String accessToken = accessObj != null ? String.valueOf(accessObj) : null;
+
                 Long expiresAt = snapshot.child("expiresAt").getValue(Long.class);
 
                 if (accessToken != null) {
@@ -173,9 +176,10 @@ public class AuthManager {
 
     public void tradeCodeForToken(String code, String verifier, TokenExchangeListener listener) {
         new Thread(() -> {
+            HttpURLConnection conn = null; // FIXED: Declare outside try block
             try {
                 URL url = new URL("https://accounts.spotify.com/api/token");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 conn.setDoOutput(true);
@@ -186,44 +190,60 @@ public class AuthManager {
                         "&redirect_uri=" + SpotifyConfig.REDIRECT_URI +
                         "&code_verifier=" + verifier;
 
-                OutputStream os = conn.getOutputStream();
-                os.write(body.getBytes());
-                os.flush();
-                os.close();
+                // FIXED: Auto-close OutputStream
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(body.getBytes());
+                    os.flush();
+                }
 
-                InputStream is = conn.getInputStream();
-                Scanner scanner = new Scanner(is).useDelimiter("\\A");
-                String responseBody = scanner.hasNext() ? scanner.next() : "";
+                int responseCode = conn.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
 
-                JSONObject jsonObject = new JSONObject(responseBody);
+                    // FIXED: Auto-close InputStream and Scanner
+                    try (InputStream is = conn.getInputStream();
+                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
+                        String responseBody = scanner.hasNext() ? scanner.next() : "";
 
-                String accessToken = jsonObject.getString("access_token");
-                String refreshToken = jsonObject.optString("refresh_token");
-                int expiresIn = jsonObject.getInt("expires_in");
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        String accessToken = jsonObject.getString("access_token");
+                        String refreshToken = jsonObject.optString("refresh_token");
+                        int expiresIn = jsonObject.getInt("expires_in");
 
-                FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-                if (currentUser != null) {
-                    String uid = currentUser.getUid();
-                    DatabaseReference db = FirebaseDatabase.getInstance("https://concerto-b02f9-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
+                        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                        if (currentUser != null) {
+                            String uid = currentUser.getUid();
+                            DatabaseReference db = FirebaseDatabase.getInstance("https://concerto-b02f9-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference();
 
-                    Map<String, Object> spotifyData = new HashMap<>();
-                    spotifyData.put("accessToken", accessToken);
-                    spotifyData.put("expiresAt", System.currentTimeMillis() + (expiresIn * 1000));
+                            Map<String, Object> spotifyData = new HashMap<>();
+                            spotifyData.put("accessToken", accessToken);
+                            spotifyData.put("expiresAt", System.currentTimeMillis() + (expiresIn * 1000));
 
-                    if (!refreshToken.isEmpty()) {
-                        spotifyData.put("refreshToken", refreshToken);
-                    }
+                            if (!refreshToken.isEmpty()) {
+                                spotifyData.put("refreshToken", refreshToken);
+                            }
 
-                    db.child("users").child(uid).child("spotify").updateChildren(spotifyData)
-                            .addOnCompleteListener(task -> {
-                                new Handler(Looper.getMainLooper()).post(() -> {
-                                    if (listener != null) listener.onSuccess(accessToken);
-                                });
+                            db.child("users").child(uid).child("spotify").updateChildren(spotifyData)
+                                    .addOnCompleteListener(task -> {
+                                        new Handler(Looper.getMainLooper()).post(() -> {
+                                            if (listener != null) listener.onSuccess(accessToken);
+                                        });
+                                    });
+                        } else {
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                if (listener != null) listener.onError("User not logged in");
                             });
+                        }
+                    }
                 } else {
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        if (listener != null) listener.onError("User not logged in");
-                    });
+                    // FIXED: Read Error stream to catch Spotify API complaints
+                    try (InputStream errorStream = conn.getErrorStream();
+                         Scanner scanner = new Scanner(errorStream).useDelimiter("\\A")) {
+                        String errorBody = scanner.hasNext() ? scanner.next() : "No error body";
+                        Log.e("SpotifyAuth", "Trade code failed: " + responseCode + " - " + errorBody);
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            if (listener != null) listener.onError("Failed with code: " + responseCode);
+                        });
+                    }
                 }
 
             } catch (Exception e) {
@@ -231,6 +251,11 @@ public class AuthManager {
                 new Handler(Looper.getMainLooper()).post(() -> {
                     if (listener != null) listener.onError(e.getMessage());
                 });
+            } finally {
+                // FIXED: Guarantee connection closure
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
         }).start();
     }

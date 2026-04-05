@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ================= OLD VERSION (GLASS / LIGHT) =================
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <solid android:color="#14FFFFFF"/>
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <gradient
+                android:angle="270"
+                android:startColor="#12FFFFFF"
+                android:endColor="#00FFFFFF"/>
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <stroke
+                android:width="1dp"
+                android:color="#40FFFFFF"/>
+        </shape>
+    </item>
+    ================================================================ -->
+
+
+    <!-- ================= NEW VERSION (MATTE DARK GRAY) ================= -->
+
+    <!-- Base matte background -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <!-- Washed-out dark gray -->
+            <solid android:color="#802A2A2A"/>
+        </shape>
+    </item>
+
+    <!-- Subtle top-to-bottom shading -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+        </shape>
+    </item>
+
+    <!-- Soft border (less harsh than white) -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <stroke
+                android:width="1dp"
+                android:color="#30FFFFFF"/>
+        </shape>
+    </item>
+
+    <!-- ================================================================ -->
+
+</layer-list>
