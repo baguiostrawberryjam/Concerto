@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -31,12 +32,19 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
         void onTrackClick(ConcertoTrack track);
     }
 
+    // Called by ItemTouchHelper swipe — only wired up for host
+    public ConcertoTrack getTrackAt(int position) {
+        if (position >= 0 && position < queueList.size()) {
+            return queueList.get(position);
+        }
+        return null;
+    }
+
     public ConcertoQueueAdapter(String currentUserUid, ConcertoTrackListener listener) {
         this.currentUserUid = currentUserUid != null ? currentUserUid : "";
         this.listener = listener;
     }
 
-    // FIXED: Null-safe setter
     public void setQueue(List<ConcertoTrack> newQueue) {
         this.queueList = newQueue != null ? newQueue : new ArrayList<>();
         notifyDataSetChanged();
@@ -57,19 +65,35 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
     @Override
     public void onBindViewHolder(@NonNull QueueViewHolder holder, int position) {
         ConcertoTrack track = queueList.get(position);
+        boolean isPlaying = track.uri != null && !track.uri.isEmpty()
+                && currentPlayingUri != null && track.uri.equals(currentPlayingUri);
 
-        boolean isPlaying = track.uri.equals(currentPlayingUri);
+        // Track name & artist
         holder.tvTrackName.setText(track.name);
-        holder.tvTrackName.setTextColor(isPlaying ? android.graphics.Color.parseColor("#1DB954") : android.graphics.Color.parseColor("#FFFFFF"));
-        holder.tvTrackName.setTypeface(null, isPlaying ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
-
+        holder.tvTrackName.setTextColor(isPlaying
+                ? android.graphics.Color.parseColor("#1DB954")
+                : android.graphics.Color.parseColor("#FFFFFF"));
+        holder.tvTrackName.setTypeface(null, isPlaying
+                ? android.graphics.Typeface.BOLD
+                : android.graphics.Typeface.NORMAL);
         holder.tvArtistName.setText(track.artist);
 
+        // Only show vote area for tracks with a valid URI
+        if (track.uri == null || track.uri.trim().isEmpty()) {
+            holder.layoutVoteArea.setVisibility(View.GONE);
+            holder.btnPlay.setOnClickListener(null);
+            holder.itemView.setOnClickListener(null);
+            return; // Skip binding the rest for corrupt entries
+        }
+
+        holder.layoutVoteArea.setVisibility(View.VISIBLE);
+
         if (isPlaying) {
+            // Currently playing — hide vote button, still show vote count
             holder.btnPlay.setVisibility(View.INVISIBLE);
         } else {
             holder.btnPlay.setVisibility(View.VISIBLE);
-            holder.btnPlay.setImageResource(android.R.drawable.arrow_up_float);
+            holder.btnPlay.setImageResource(R.drawable.ic_button_upvote);
 
             boolean hasVoted = track.voters != null && track.voters.containsKey(currentUserUid);
             if (hasVoted) {
@@ -81,6 +105,15 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
             }
         }
 
+        // FEATURE: Show vote count
+        int voteCount = track.voters != null ? track.voters.size() : 0;
+        holder.tvVoteCount.setText(String.valueOf(voteCount));
+        // Highlight count green if this is a popular track (3+ votes) or user voted
+        boolean hasVoted = track.voters != null && track.voters.containsKey(currentUserUid);
+        holder.tvVoteCount.setTextColor(hasVoted
+                ? android.graphics.Color.parseColor("#1DB954")
+                : android.graphics.Color.parseColor("#AAAAAA"));
+
         holder.btnPlay.setOnClickListener(v -> {
             if (listener != null) listener.onVoteClick(track);
         });
@@ -89,7 +122,6 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
             if (listener != null) listener.onTrackClick(track);
         });
 
-        // Uses safe itemView.getContext()
         if (track.imageUrl != null && !track.imageUrl.isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(track.imageUrl)
@@ -110,6 +142,8 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
         TextView tvTrackName;
         TextView tvArtistName;
         ImageButton btnPlay;
+        TextView tvVoteCount;
+        LinearLayout layoutVoteArea;
 
         public QueueViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -117,6 +151,8 @@ public class ConcertoQueueAdapter extends RecyclerView.Adapter<ConcertoQueueAdap
             tvTrackName = itemView.findViewById(R.id.tvTrackName);
             tvArtistName = itemView.findViewById(R.id.tvArtistName);
             btnPlay = itemView.findViewById(R.id.btnPlay);
+            tvVoteCount = itemView.findViewById(R.id.tvVoteCount);
+            layoutVoteArea = itemView.findViewById(R.id.layoutVoteArea);
         }
     }
 }

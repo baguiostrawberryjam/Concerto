@@ -11,6 +11,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -146,8 +148,50 @@ public class PlayerFragment extends Fragment {
                         subscribeToPlayerState();
                         isSubscribed = true;
                     }
+                    // If already subscribed (e.g. same connection, new track from Concerto),
+                    // loading will be cleared by the subscription callback. But if Spotify
+                    // doesn't fire a state update (track already playing), clear it here.
+                    if (isSubscribed) {
+                        spotifyManager.getPlayerState(playerState -> {
+                            if (playerState != null && playerState.track != null && isAdded()) {
+                                String activePin = concertoViewModel.getActiveSessionPin().getValue();
+                                if (activePin != null) {
+                                    // In Concerto: always clear loading once we confirm a track is playing
+                                    playerViewModel.setCurrentPlayingUri(playerState.track.uri);
+                                    playerViewModel.setIsCurrentlyPaused(playerState.isPaused);
+                                    playerViewModel.setIsLoadingTrack(false);
+                                    // Sync play/pause icon
+                                    if (bind != null && isAdded()) {
+                                        int iconRes = playerState.isPaused ? R.drawable.ic_button_play : R.drawable.ic_button_pause;
+                                        int iconMini = playerState.isPaused ? R.drawable.ic_button_play_solid : R.drawable.ic_button_pause_solid;
+                                        bind.btnPlayerPlay.setImageResource(iconRes);
+                                        bind.btnMiniPlay.setImageResource(iconMini);
+                                        if (bottomSheetBehavior != null &&
+                                                bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                                        }
+                                    }
+                                }
+                            } else {
+                                // No state returned — clear loading anyway
+                                playerViewModel.setIsLoadingTrack(false);
+                            }
+                        });
+                    }
                 }
-                @Override public void onError(Throwable error) { Log.e("Spotify", "Connection failed", error); }
+
+                @Override
+                public void onError(Throwable error) {
+                    Log.e("Spotify", "Playback failed", error);
+                    if (!isAdded()) return;
+                    playerViewModel.setIsLoadingTrack(false);
+                    String errorMsg = error.getMessage() != null ? error.getMessage().toLowerCase() : "";
+                    if (errorMsg.contains("premium") || errorMsg.contains("unauthorized") || errorMsg.contains("not supported")) {
+                        Toast.makeText(requireContext(), "Spotify Premium is required to play full tracks.", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to play track. Ensure Spotify is open.", Toast.LENGTH_SHORT).show();
+                    }
+                }
             });
         });
 
@@ -171,6 +215,20 @@ public class PlayerFragment extends Fragment {
             if (bind != null && name != null) {
                 bind.tvMiniTrackName.setText(name);
                 bind.tvTrackName.setText(name);
+
+                // Guests have no Spotify Remote connection so subscribeToPlayerState never
+                // fires for them — reveal the sheet here instead when a track is playing
+                Boolean isHost = concertoViewModel.getIsHost().getValue();
+                String activePin = concertoViewModel.getActiveSessionPin().getValue();
+                boolean isGuest = activePin != null && (isHost == null || !isHost);
+                boolean hasRealTrack = !name.isEmpty()
+                        && !name.equals("Not Playing")
+                        && !name.equals("Waiting for music...");
+
+                if (isGuest && hasRealTrack && bottomSheetBehavior != null
+                        && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
             }
         });
 
@@ -195,7 +253,10 @@ public class PlayerFragment extends Fragment {
 
         playerViewModel.getControlsEnabled().observe(getViewLifecycleOwner(), enabled -> {
             if (bind != null && enabled != null) {
+                // Seek bar: fully block touch for non-hosts
                 bind.seekBarProgress.setEnabled(enabled);
+                bind.seekBarProgress.setOnTouchListener(enabled ? null : (v, event) -> true);
+
                 bind.btnPlayerPlay.setEnabled(enabled);
                 bind.btnMiniPlay.setEnabled(enabled);
                 bind.btnNext.setEnabled(enabled);
@@ -207,6 +268,15 @@ public class PlayerFragment extends Fragment {
                 bind.btnNext.setAlpha(alpha);
                 bind.btnPrevious.setAlpha(alpha);
             }
+        });
+
+        // Sync pause/play icons for guests from Firebase-driven state changes
+        playerViewModel.getIsCurrentlyPaused().observe(getViewLifecycleOwner(), isPaused -> {
+            if (bind == null || isPaused == null) return;
+            int iconRes = isPaused ? R.drawable.ic_button_play : R.drawable.ic_button_pause;
+            int iconMini = isPaused ? R.drawable.ic_button_play_solid : R.drawable.ic_button_pause_solid;
+            bind.btnPlayerPlay.setImageResource(iconRes);
+            bind.btnMiniPlay.setImageResource(iconMini);
         });
 
         playerViewModel.getIsLoadingTrack().observe(getViewLifecycleOwner(), isLoading -> {
@@ -262,7 +332,11 @@ public class PlayerFragment extends Fragment {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 isUserSeeking = false;
-                playerViewModel.seekTo(seekBar.getProgress());
+                // Only seek if controls are enabled (host only)
+                Boolean controlsEnabled = playerViewModel.getControlsEnabled().getValue();
+                if (controlsEnabled != null && controlsEnabled) {
+                    playerViewModel.seekTo(seekBar.getProgress());
+                }
             }
         });
 
@@ -312,8 +386,9 @@ public class PlayerFragment extends Fragment {
                         long remainingMs = playerState.track.duration - playerState.playbackPosition;
                         if (remainingMs < 1500 && !isTransitioning) {
                             isTransitioning = true;
+                            String activePin = concertoViewModel.getActiveSessionPin().getValue();
                             Boolean isHost = concertoViewModel.getIsHost().getValue();
-                            if (isHost != null && isHost) {
+                            if (activePin != null && isHost != null && isHost) {
                                 concertoViewModel.playNextTrack();
                             }
                             progressHandler.postDelayed(() -> isTransitioning = false, 4000);
@@ -329,9 +404,16 @@ public class PlayerFragment extends Fragment {
         spotifyManager.subscribeToPlayerState((track, isPaused) -> {
             if (bind == null || !isAdded()) return;
 
-            if (concertoViewModel.getActiveSessionPin().getValue() == null) {
+            String activePin = concertoViewModel.getActiveSessionPin().getValue();
+            Boolean isHostInSession = concertoViewModel.getIsHost().getValue();
+            if (activePin == null) {
+                // Solo mode — always enable controls
+                playerViewModel.setControlsEnabled(true);
+            } else if (isHostInSession != null && isHostInSession) {
+                // Concerto host — enable controls
                 playerViewModel.setControlsEnabled(true);
             }
+            // Guests stay disabled (set by ConcertoFragment observer)
 
             String currentPlaying = playerViewModel.getCurrentPlayingUri().getValue();
             boolean isNewTrack = (currentPlaying == null || !currentPlaying.equals(track.uri));

@@ -2,41 +2,44 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
+    android:padding="32dp"
     android:orientation="vertical"
-    android:padding="32dp">
+    android:gravity="center"
+    android:background="@color/background">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:text="@string/spotify_link_title"
+        android:textColor="#FFFFFF"
         android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
+        android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
         android:text="@string/spotify_link_desc"
-        android:textAlignment="center"
+        android:textColor="#AAAAAA"
         android:textSize="16sp"
-        android:layout_marginBottom="32dp"/>
+        android:textAlignment="center" />
 
     <Button
         android:id="@+id/btnSpotifyLogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:padding="16dp"
+        android:backgroundTint="#1DB954"
         android:text="@string/spotify_connect_button"
-        android:backgroundTint="@color/spotify_green"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
+        android:textColor="#FFFFFF" />
 
     <Button
         android:id="@+id/btnCancel"
+        style="?android:attr/borderlessButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/action_cancel"
-        style="?android:attr/borderlessButtonStyle"
-        android:textColor="@color/error"/>
+        android:textColor="#FF5555" />
 </LinearLayout>

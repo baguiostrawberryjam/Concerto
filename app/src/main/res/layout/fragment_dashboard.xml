@@ -2,49 +2,145 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="16dp"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@color/background">
 
-    <TextView
-        android:id="@+id/tvWelcomeMessage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Welcome!"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
+        <Button
+            android:id="@+id/btnConnectSpotify"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:layout_weight="1"
+            android:visibility="gone"
+            android:backgroundTint="#1DB954"
+            android:text="Connect Spotify"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="24dp"
+        android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btnConnectSpotify"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Connect Spotify"
-            android:backgroundTint="#1DB954"
-            android:textColor="#FFFFFF"
+            android:id="@+id/btnClassical"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
             android:layout_marginEnd="4dp"
-            android:visibility="gone"/>
+
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+
+            android:includeFontPadding="false"
+
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="0dp"
+
+            android:gravity="center"
+            android:text="Classical"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_genre_classical"
+            app:backgroundTint="@null"
+            android:textColor="@drawable/sel_genre_text"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"/>
+
+        <Button
+            android:id="@+id/btnHiphop"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginEnd="4dp"
+
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+
+            android:includeFontPadding="false"
+
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="0dp"
+
+            android:gravity="center"
+            android:text="Hip-hop"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_genre_hiphop"
+            app:backgroundTint="@null"
+            android:textColor="@drawable/sel_genre_text"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"/>
+
+        <Button
+            android:id="@+id/btnPop"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginEnd="8dp"
+
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+
+            android:includeFontPadding="false"
+
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="0dp"
+
+            android:gravity="center"
+            android:text="Pop"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:background="@drawable/bg_genre_pop"
+            app:backgroundTint="@null"
+            android:textColor="@drawable/sel_genre_text"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"/>
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvGenre"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="Genre"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold" />
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:indeterminateTint="@color/primary" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvDashboardTracks"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scrollbars="vertical"
-        android:layout_marginTop="8dp"/>
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDashboardTracks"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="8dp"
+            android:paddingBottom="76dp"
+            android:clipToPadding="false"
+            android:scrollbars="vertical" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
 </LinearLayout>

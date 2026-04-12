@@ -8,7 +8,6 @@ public class ConcertoTrack {
     public String name;
     public String artist;
     public String imageUrl;
-    public int voteCount;
     public Map<String, Boolean> voters; // Tracks which UIDs have voted
 
     // Required empty constructor for Firebase
@@ -20,7 +19,6 @@ public class ConcertoTrack {
         this.name = name;
         this.artist = artist;
         this.imageUrl = imageUrl;
-        this.voteCount = 1; // Starts with 1 vote when added
         this.voters = new HashMap<>();
     }
 }

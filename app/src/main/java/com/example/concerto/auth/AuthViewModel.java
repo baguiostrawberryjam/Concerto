@@ -9,21 +9,25 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.example.concerto.spotify.SpotifyAppTokenManager;
+import com.example.concerto.spotify.SpotifyRepository;
 
 public class AuthViewModel extends AndroidViewModel {
 
     // State Holders (LiveData)
     private final MutableLiveData<String> spotifyToken = new MutableLiveData<>();
     private final MutableLiveData<String> codeVerifier = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isPremiumUser = new MutableLiveData<>(false);
 
     // Managers
     private final SpotifyAppTokenManager tokenManager;
     private final AuthManager authManager;
+    private final SpotifyRepository spotifyRepository;
 
     public AuthViewModel(@NonNull Application application) {
         super(application);
-        this.tokenManager = SpotifyAppTokenManager.getInstance(application);
-        this.authManager = new AuthManager(tokenManager);
+        tokenManager = SpotifyAppTokenManager.getInstance(application);
+        authManager = new AuthManager(tokenManager);
+        spotifyRepository = SpotifyRepository.getInstance(application); // Added
     }
 
     // --- Interfaces ---
@@ -47,9 +51,17 @@ public class AuthViewModel extends AndroidViewModel {
     }
 
     public void setSpotifyToken(String token) {
-        // FIXED: Always use postValue for thread safety
         spotifyToken.postValue(token);
-        tokenManager.setUserToken(token); // Update memory cache
+        tokenManager.setUserToken(token);
+
+        // --- THE FIX: Automatically verify Premium status ---
+        if (token != null && !token.trim().isEmpty()) {
+            spotifyRepository.checkPremiumStatus(token, isPremium -> {
+                isPremiumUser.postValue(isPremium);
+            });
+        } else {
+            isPremiumUser.postValue(false);
+        }
     }
 
     public void setCodeVerifier(String verifier) {
@@ -63,6 +75,10 @@ public class AuthViewModel extends AndroidViewModel {
 
     public boolean isUserLoggedIn() {
         return authManager.isUserLoggedIn();
+    }
+
+    public LiveData<Boolean> getIsPremiumUser() {
+        return isPremiumUser;
     }
 
     // --- Core Auth Actions ---

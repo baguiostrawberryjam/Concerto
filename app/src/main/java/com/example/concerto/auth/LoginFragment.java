@@ -81,11 +81,6 @@ public class LoginFragment extends Fragment {
                     }
 
                     Log.d("LoginProcess", "3. Navigating to Dashboard...");
-                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setVisibility(View.VISIBLE);
-                        bottomNav.getMenu().findItem(R.id.nav_home).setChecked(true);
-                    }
 
                     // FIXED: commitAllowingStateLoss prevents crashes if app is backgrounded
                     getActivity().getSupportFragmentManager().beginTransaction()

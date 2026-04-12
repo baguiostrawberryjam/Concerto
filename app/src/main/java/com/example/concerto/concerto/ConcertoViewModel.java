@@ -17,7 +17,7 @@ public class ConcertoViewModel extends ViewModel {
     private final MutableLiveData<String> toastMessage = new MutableLiveData<>();
     private final MutableLiveData<List<ConcertoTrack>> queueLiveData = new MutableLiveData<>();
     private final MutableLiveData<ConcertoTrack> currentlyPlayingLiveData = new MutableLiveData<>();
-    private final MutableLiveData<String> sessionStatus = new MutableLiveData<>("active");
+    private final MutableLiveData<String> sessionStatus = new MutableLiveData<>(null);
 
     public LiveData<String> getActiveSessionPin() { return activeSessionPin; }
     public LiveData<Boolean> getIsHost() { return isHost; }
@@ -57,6 +57,10 @@ public class ConcertoViewModel extends ViewModel {
                 isHost.postValue(isUserTheHost);
                 activeSessionPin.postValue(pin);
                 sessionStatus.postValue("active");
+                // If host is rejoining after stepping out, reset status to active
+                if (isUserTheHost) {
+                    concertoManager.setRoomStatus(pin, "active");
+                }
                 startObserving(pin);
             }
 
@@ -68,7 +72,7 @@ public class ConcertoViewModel extends ViewModel {
     }
 
     public void joinHostedConcerto(String pin) {
-        joinConcerto(pin); // Reuses the exact same logic safely
+        joinConcerto(pin);
     }
 
     private void startObserving(String pin) {
@@ -79,6 +83,11 @@ public class ConcertoViewModel extends ViewModel {
         );
     }
 
+    /**
+     * Explicit end: host pressed "End Session" or guest pressed "Leave".
+     * For host: marks room ended in Firebase then clears local state.
+     * For guest: just stops observing and clears local state.
+     */
     public void leaveConcerto() {
         String pin = activeSessionPin.getValue();
         Boolean hostStatus = isHost.getValue();
@@ -90,7 +99,30 @@ public class ConcertoViewModel extends ViewModel {
             concertoManager.stopObservingRoom(pin);
         }
 
-        // FIXED: Use postValue for thread-safe memory wipe
+        clearLocalSessionState();
+    }
+
+    /**
+     * Host "Step Out": sets status to host_away so guests are notified and redirected,
+     * stops Firebase listeners, but leaves room data intact so host can rejoin.
+     * Also called by onCleared() so closing the app doesn't end the room.
+     */
+    public void disconnectWithoutEnding() {
+        String pin = activeSessionPin.getValue();
+        Boolean hostStatus = isHost.getValue();
+
+        if (pin != null) {
+            if (hostStatus != null && hostStatus) {
+                // Notify guests that host has stepped out
+                concertoManager.setRoomStatus(pin, "host_away");
+            }
+            concertoManager.stopObservingRoom(pin);
+        }
+
+        clearLocalSessionState();
+    }
+
+    private void clearLocalSessionState() {
         activeSessionPin.postValue(null);
         isHost.postValue(false);
         queueLiveData.postValue(null);
@@ -108,7 +140,6 @@ public class ConcertoViewModel extends ViewModel {
         String pin = activeSessionPin.getValue();
         Boolean hostStatus = isHost.getValue();
         List<ConcertoTrack> currentQueue = queueLiveData.getValue();
-
         if (hostStatus != null && hostStatus && pin != null) {
             concertoManager.playNextTrack(pin, currentQueue);
         }
@@ -135,6 +166,21 @@ public class ConcertoViewModel extends ViewModel {
         }
     }
 
+    public void deleteTrackFromQueue(ConcertoTrack track) {
+        String pin = activeSessionPin.getValue();
+        Boolean hostStatus = isHost.getValue();
+        if (pin != null && track != null && hostStatus != null && hostStatus) {
+            concertoManager.deleteTrackFromQueue(pin, track, new ConcertoManager.ActionCallback() {
+                @Override
+                public void onSuccess() {}
+                @Override
+                public void onError(String error) {
+                    toastMessage.postValue("Could not delete track: " + error);
+                }
+            });
+        }
+    }
+
     public void clearActiveSessionPin() {
         activeSessionPin.postValue(null);
     }
@@ -146,6 +192,7 @@ public class ConcertoViewModel extends ViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
-        leaveConcerto();
+        // App closed — stop listeners but don't end the room
+        disconnectWithoutEnding();
     }
 }

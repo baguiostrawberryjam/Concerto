@@ -33,7 +33,7 @@ public class SpotifyPlayerController {
     public void connect(ConnectionListener listener) {
         ConnectionParams params = new ConnectionParams.Builder(SpotifyConfig.CLIENT_ID)
                 .setRedirectUri(SpotifyConfig.REDIRECT_URI)
-                .showAuthView(false)
+                .showAuthView(true)
                 .build();
 
         SpotifyAppRemote.connect(context, params, new Connector.ConnectionListener() {
@@ -50,8 +50,16 @@ public class SpotifyPlayerController {
         });
     }
 
-    public void play(String uri) {
-        if (isReady()) appRemote.getPlayerApi().play(uri);
+    public void play(String uri, ConnectionListener listener) {
+        if (isReady()) {
+            appRemote.getPlayerApi().play(uri)
+                    .setResultCallback(empty -> {
+                        if (listener != null) listener.onConnected();
+                    })
+                    .setErrorCallback(throwable -> {
+                        if (listener != null) listener.onError(throwable);
+                    });
+        }
     }
 
     public void pause() {
@@ -109,14 +117,12 @@ public class SpotifyPlayerController {
 
     public void playOrConnect(String uri, ConnectionListener listener) {
         if (isReady()) {
-            play(uri);
-            if (listener != null) listener.onConnected();
+            play(uri, listener); // listener.onConnected() is handled inside play()
         } else {
             connect(new ConnectionListener() {
                 @Override
                 public void onConnected() {
-                    play(uri);
-                    if (listener != null) listener.onConnected();
+                    play(uri, listener);
                 }
 
                 @Override

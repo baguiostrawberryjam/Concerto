@@ -19,6 +19,8 @@ public class DashboardViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<Track>> songsLiveData = new MutableLiveData<>();
     private final MutableLiveData<Boolean> canPlayMusicLiveData = new MutableLiveData<>();
+    // Tracks the last selected genre so DashboardFragment can restore it on re-navigation
+    private String lastGenre = "classical";
 
     private final SpotifyRepository spotifyRepository;
     private final SpotifyAppTokenManager tokenManager;
@@ -31,6 +33,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public LiveData<List<Track>> getSongs() { return songsLiveData; }
     public LiveData<Boolean> getCanPlayMusic() { return canPlayMusicLiveData; }
+    public String getLastGenre() { return lastGenre; }
 
     public void loadRandomSongs() {
         executorService.execute(() -> {
@@ -53,5 +56,21 @@ public class DashboardViewModel extends AndroidViewModel {
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
         }
+    }
+
+    public void loadSongsByGenre(String genre) {
+        if (genre != null) lastGenre = genre; // Persist for re-navigation restore
+        executorService.execute(() -> {
+            // Spotify API allows filtering by genre using "genre:name"
+            String query = "genre:" + genre;
+
+            // Re-use your existing search method in the Repository
+            List<Track> songs = spotifyRepository.getSearchedSongs(query);
+            boolean canPlay = canPlayMusic();
+
+            // Update the LiveData, which automatically updates the RecyclerView in the Fragment
+            songsLiveData.postValue(songs);
+            canPlayMusicLiveData.postValue(canPlay);
+        });
     }
 }

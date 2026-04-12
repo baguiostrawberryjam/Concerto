@@ -1,12 +1,10 @@
 package com.example.concerto.search;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.concerto.R;
 import com.example.concerto.adapters.TrackAdapter;
+import com.example.concerto.auth.AuthViewModel;
 import com.example.concerto.concerto.ConcertoViewModel;
 import com.example.concerto.databinding.FragmentSearchBinding;
 import com.example.concerto.player.PlayerViewModel;
@@ -28,6 +27,7 @@ public class SearchFragment extends Fragment {
     private SearchViewModel searchViewModel;
     private PlayerViewModel playerViewModel;
     private ConcertoViewModel concertoViewModel;
+    private AuthViewModel authViewModel; // ADDED
     private TrackAdapter trackAdapter;
 
     public static SearchFragment newInstance() {
@@ -46,7 +46,7 @@ public class SearchFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         initViewModels();
-        setupRecyclerView();
+        setupUI();
         setupObservers();
         setupButtons();
     }
@@ -57,38 +57,48 @@ public class SearchFragment extends Fragment {
         bind = null;
     }
 
-    // ==========================================
-    // INITIALIZATION METHODS
-    // ==========================================
-
     private void initViewModels() {
-        if (getActivity() == null) return;
         searchViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
         playerViewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
         concertoViewModel = new ViewModelProvider(requireActivity()).get(ConcertoViewModel.class);
+        authViewModel = new ViewModelProvider(requireActivity()).get(AuthViewModel.class); // ADDED
     }
 
-    private void setupRecyclerView() {
-        trackAdapter = new TrackAdapter((track, canPlayMusic) -> {
+    private void setupUI() {
+        trackAdapter = new TrackAdapter((track, canPlay) -> {
             String activePin = concertoViewModel.getActiveSessionPin().getValue();
+
             if (activePin != null) {
+                // In a Concerto Room: ANYONE can add to the queue!
                 concertoViewModel.addTrackToQueue(track);
-                if (isAdded() && getActivity() != null) {
-                    Toast.makeText(requireContext(), "Adding to Concerto queue...", Toast.LENGTH_SHORT).show();
-                    getActivity().findViewById(R.id.bottomNav).performClick(); // Re-select Concerto to go back
+
+                com.google.android.material.bottomnavigation.BottomNavigationView bottomNav = requireActivity().findViewById(R.id.bottomNav);
+                if (bottomNav != null) {
+                    bottomNav.setSelectedItemId(R.id.nav_concerto);
                 }
             } else {
-                if (canPlayMusic) {
-                    playerViewModel.playTrack(track.uri);
-                    playerViewModel.setDisplayInfo(track.name, track.artist != null ? track.artist.name : "Unknown Artist", track.imageUri != null ? track.imageUri.raw : "");
+                // Solo Mode: Enforce Premium Check
+                String token = authViewModel.getSpotifyToken().getValue();
+                Boolean isPremium = authViewModel.getIsPremiumUser().getValue();
+
+                if (token == null || token.trim().isEmpty()) {
+                    Toast.makeText(requireContext(), "Connect Spotify to play full tracks!", Toast.LENGTH_SHORT).show();
+                    requireActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
+                            .addToBackStack(null)
+                            .commit();
+                } else if (isPremium == null || !isPremium) {
+                    Toast.makeText(requireContext(), "Spotify Premium is required to play tracks.", Toast.LENGTH_LONG).show();
                 } else {
-                    if (isAdded() && getActivity() != null) {
-                        Toast.makeText(requireContext(), "Connect Spotify to play music", Toast.LENGTH_SHORT).show();
-                        getActivity().getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
-                                .addToBackStack(null)
-                                .commitAllowingStateLoss();
-                    }
+                    Toast.makeText(requireContext(), "Loading: " + track.name, Toast.LENGTH_SHORT).show();
+
+                    String artistName = (track.artist != null && track.artist.name != null) ? track.artist.name : "Unknown Artist";
+                    String imageUrl = (track.imageUri != null && track.imageUri.raw != null) ? track.imageUri.raw : "";
+
+                    playerViewModel.setDisplayInfo(track.name, artistName, imageUrl);
+                    playerViewModel.setControlsEnabled(true);
+                    playerViewModel.playTrack(track.uri);
+                    playerViewModel.expandPlayer();
                 }
             }
         });
@@ -99,25 +109,37 @@ public class SearchFragment extends Fragment {
 
     private void setupObservers() {
         searchViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            if (!isAdded() || bind == null) return;
             bind.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        });
-
-        searchViewModel.getSearchResults().observe(getViewLifecycleOwner(), songs -> {
-            if (!isAdded() || bind == null) return;
-            if (songs != null && !songs.isEmpty()) {
-                trackAdapter.setTracks(songs);
-            } else {
-                Toast.makeText(requireContext(), "No results found. Try another search.", Toast.LENGTH_SHORT).show();
+            if (isLoading) {
+                bind.tvEmptyState.setVisibility(View.GONE);
+                bind.rvSearchTracks.setVisibility(View.GONE);
+                bind.tvResultsLabel.setVisibility(View.GONE);
             }
         });
 
-        searchViewModel.getCanPlayMusic().observe(getViewLifecycleOwner(), canPlay -> {
-            if (trackAdapter != null) trackAdapter.setCanPlayMusic(canPlay);
+        searchViewModel.getSearchResults().observe(getViewLifecycleOwner(), tracks -> {
+            if (tracks != null && !tracks.isEmpty()) {
+                trackAdapter.setTracks(tracks);
+                bind.rvSearchTracks.setVisibility(View.VISIBLE);
+                bind.tvEmptyState.setVisibility(View.GONE);
+                bind.tvResultsLabel.setVisibility(View.VISIBLE);
+            } else {
+                bind.rvSearchTracks.setVisibility(View.GONE);
+                bind.tvEmptyState.setVisibility(View.VISIBLE);
+                bind.tvEmptyState.setText("No results found. Try another search.");
+                bind.tvResultsLabel.setVisibility(View.GONE);
+            }
+        });
+
+        // --- THE FIX: Observe Premium status from AuthViewModel directly ---
+        authViewModel.getIsPremiumUser().observe(getViewLifecycleOwner(), isPremium -> {
+            trackAdapter.setCanPlayMusic(isPremium != null && isPremium);
         });
 
         playerViewModel.getCurrentPlayingUri().observe(getViewLifecycleOwner(), uri -> {
-            if (trackAdapter != null) trackAdapter.setCurrentPlayingUri(uri);
+            if (trackAdapter != null) {
+                trackAdapter.setCurrentPlayingUri(uri);
+            }
         });
     }
 
@@ -132,24 +154,13 @@ public class SearchFragment extends Fragment {
         });
     }
 
-    // ==========================================
-    // HELPER METHODS
-    // ==========================================
-
     private void executeSearch() {
-        if (bind == null || !isAdded()) return;
-
         String query = bind.etSearchQuery.getText().toString().trim();
         if (!query.isEmpty()) {
             searchViewModel.loadSearchedSongs(query);
-
-            // FIXED: Safe Context Check for Keyboard Manager
-            Context context = getContext();
-            if (context != null) {
-                InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) {
-                    imm.hideSoftInputFromWindow(bind.etSearchQuery.getWindowToken(), 0);
-                }
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) requireActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(bind.etSearchQuery.getWindowToken(), 0);
             }
         } else {
             Toast.makeText(requireContext(), "Please enter a search term", Toast.LENGTH_SHORT).show();

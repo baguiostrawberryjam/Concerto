@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="40dp">
+
+    <!-- Illustration / icon area -->
+    <ImageView
+        android:id="@+id/ivOnboardingIllustration"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_menu_slideshow"
+        android:layout_marginBottom="40dp" />
+
+    <!-- Page title -->
+    <TextView
+        android:id="@+id/tvOnboardingTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Page Title"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:textAlignment="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Subtext -->
+    <TextView
+        android:id="@+id/tvOnboardingSubtext"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Subtext goes here."
+        android:textSize="16sp"
+        android:textColor="#AAAAAA"
+        android:textAlignment="center"
+        android:lineSpacingMultiplier="1.4"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Action button (only visible on page 4) -->
+    <Button
+        android:id="@+id/btnOnboardingAction"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Connect to Spotify"
+        android:backgroundTint="#1DB954"
+        android:textColor="#FFFFFF"
+        android:visibility="gone" />
+
+</LinearLayout>

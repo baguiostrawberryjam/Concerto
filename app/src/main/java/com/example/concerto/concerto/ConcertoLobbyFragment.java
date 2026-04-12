@@ -56,15 +56,21 @@ public class ConcertoLobbyFragment extends Fragment {
     private void setupButtons() {
         bind.btnCreateConcerto.setOnClickListener(v -> {
             String token = authViewModel.getSpotifyToken().getValue();
-            if (token != null && !token.trim().isEmpty()) {
-                concertoViewModel.createConcerto();
-            } else {
-                if (!isAdded() || getActivity() == null) return;
+            Boolean isPremium = authViewModel.getIsPremiumUser().getValue();
+
+            if (token == null || token.trim().isEmpty()) {
+                // Scenario 1: Not connected at all
                 Toast.makeText(requireContext(), "Connect Spotify to host a room!", Toast.LENGTH_SHORT).show();
-                getActivity().getSupportFragmentManager().beginTransaction()
+                requireActivity().getSupportFragmentManager().beginTransaction()
                         .replace(R.id.layoutFragmentContainer, new ConnectSpotifyFragment())
                         .addToBackStack(null)
                         .commit();
+            } else if (isPremium == null || !isPremium) {
+                // Scenario 2: Connected, but on a Free account
+                Toast.makeText(requireContext(), "Spotify Premium is required to host a Concerto room.", Toast.LENGTH_LONG).show();
+            } else {
+                // Scenario 3: Connected AND Premium
+                concertoViewModel.createConcerto();
             }
         });
 

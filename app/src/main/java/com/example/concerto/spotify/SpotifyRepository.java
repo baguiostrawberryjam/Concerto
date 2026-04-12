@@ -33,6 +33,10 @@ public class SpotifyRepository {
         return instance;
     }
 
+    public interface PremiumCheckCallback {
+        void onResult(boolean isPremium);
+    }
+
     public List<Track> getRandomSongs() {
         String token = tokenManager.getAppToken();
         List<Track> tracksList = new ArrayList<>();
@@ -222,5 +226,45 @@ public class SpotifyRepository {
             }
         }
         return tracksList;
+    }
+
+    public void checkPremiumStatus(String userToken, PremiumCheckCallback callback) {
+        if (userToken == null || userToken.isEmpty()) {
+            if (callback != null) callback.onResult(false);
+            return;
+        }
+
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                // FIXED: Use standard Spotify API endpoint for user profile
+                URL url = new URL("https://api.spotify.com/v1/me");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Authorization", "Bearer " + userToken);
+
+                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    try (InputStream is = conn.getInputStream();
+                         Scanner scanner = new Scanner(is).useDelimiter("\\A")) {
+                        String responseBody = scanner.hasNext() ? scanner.next() : "";
+
+                        JSONObject jsonObject = new JSONObject(responseBody);
+                        String product = jsonObject.optString("product", "free");
+
+                        boolean isPremium = "premium".equalsIgnoreCase(product);
+                        Log.d("SpotifyPremiumCheck", "User account type: " + product);
+
+                        if (callback != null) callback.onResult(isPremium);
+                    }
+                } else {
+                    if (callback != null) callback.onResult(false);
+                }
+            } catch (Exception e) {
+                Log.e("SpotifyPremiumCheck", "Failed to check premium status", e);
+                if (callback != null) callback.onResult(false);
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }).start();
     }
 }
