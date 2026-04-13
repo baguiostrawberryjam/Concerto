@@ -193,7 +193,7 @@ public class ProfileFragment extends Fragment {
             boolean isConnected = (token != null && !token.trim().isEmpty());
             if (isConnected) {
                 bind.tvSpotifyStatus.setText("Spotify: Connected");
-                bind.tvSpotifyStatus.setTextColor(android.graphics.Color.parseColor("#1DB954"));
+                bind.tvSpotifyStatus.setTextColor(android.graphics.Color.parseColor("#7C72E0"));
                 bind.btnConnectSpotify.setVisibility(View.GONE);
             } else {
                 bind.tvSpotifyStatus.setText("Spotify: Disconnected");
@@ -300,7 +300,10 @@ public class ProfileFragment extends Fragment {
                             ? new String[]{"Take Photo", "Choose from Gallery", "Remove Photo"}
                             : new String[]{"Take Photo", "Choose from Gallery"};
 
-                    new AlertDialog.Builder(requireContext())
+                    // FIX: Use MaterialAlertDialogBuilder with a forced dark theme
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(
+                            requireContext(),
+                            android.R.style.Theme_DeviceDefault_Dialog_Alert)
                             .setTitle("Profile Photo")
                             .setItems(options, (dialog, which) -> {
                                 if (which == 0) checkCameraPermissionAndLaunch();
@@ -494,7 +497,8 @@ public class ProfileFragment extends Fragment {
         usersDb.child(user.getUid()).child("profileImageBase64").removeValue()
                 .addOnCompleteListener(task -> {
                     if (isAdded() && bind != null) {
-                        bind.ivProfileImage.setImageResource(android.R.drawable.ic_menu_camera);
+                        // FIX: Updated to custom placeholder
+                        bind.ivProfileImage.setImageResource(R.drawable.img_profile_placeholder);
                         Toast.makeText(requireContext(),
                                 "Profile photo removed.", Toast.LENGTH_SHORT).show();
                     }
@@ -535,8 +539,8 @@ public class ProfileFragment extends Fragment {
                             return;
                         }
                     }
-                    // No image in DB — show default
-                    bind.ivProfileImage.setImageResource(android.R.drawable.ic_menu_camera);
+                    // FIX: Updated to custom placeholder
+                    bind.ivProfileImage.setImageResource(R.drawable.img_profile_placeholder);
                 });
     }
 }

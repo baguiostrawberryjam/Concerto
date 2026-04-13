@@ -74,12 +74,21 @@ public class ConcertoLobbyFragment extends Fragment {
             }
         });
 
+        bind.btnBackFromLobby.setOnClickListener(v -> {
+            if (getActivity() != null) {
+                com.google.android.material.bottomnavigation.BottomNavigationView bottomNav =
+                        getActivity().findViewById(R.id.bottomNav);
+                if (bottomNav != null) bottomNav.setSelectedItemId(R.id.nav_home);
+            }
+        });
+
         bind.btnJoinConcerto.setOnClickListener(v -> {
             String pin = bind.etConcertoPin.getText() != null ? bind.etConcertoPin.getText().toString().trim() : "";
             if (pin.length() == 4) {
                 concertoViewModel.joinConcerto(pin);
             } else {
-                bind.tilPinInput.setError("Please enter a valid 4-digit PIN");
+                android.widget.Toast.makeText(requireContext(),
+                        "Please enter a valid 4-digit PIN", android.widget.Toast.LENGTH_SHORT).show();
             }
         });
     }

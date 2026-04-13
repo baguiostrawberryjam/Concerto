@@ -18,7 +18,8 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_logo_main</item>
         <item name="postSplashScreenTheme">@style/Theme.Concerto</item>
 
-        <item name="android:fontFamily">@font/plus_jakarta_sans_regular</item>
+        <item name="android:fontFamily">@font/plus_jakarta_sans_variable</item>
+        <item name="fontFamily">@font/plus_jakarta_sans_variable</item>
     </style>
 
     <style name="Theme.Concerto" parent="Base.Theme.Concerto" />

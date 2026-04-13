@@ -100,7 +100,6 @@
         android:id="@+id/rvSearchTracks"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingBottom="76dp"
         android:clipToPadding="false"
         android:scrollbars="vertical"
         android:visibility="gone" />

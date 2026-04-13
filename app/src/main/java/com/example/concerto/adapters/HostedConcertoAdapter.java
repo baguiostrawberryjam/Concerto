@@ -43,8 +43,8 @@ public class HostedConcertoAdapter extends RecyclerView.Adapter<HostedConcertoAd
         holder.tvConcertoPin.setText("Room PIN: " + concerto.pin);
 
         boolean isActive = "active".equals(concerto.status);
-        holder.tvConcertoStatus.setText(isActive ? "Currently Active" : "Session Ended");
-        holder.tvConcertoStatus.setTextColor(isActive ? android.graphics.Color.parseColor("#1DB954") : android.graphics.Color.parseColor("#AAAAAA"));
+        holder.tvConcertoStatus.setText(isActive ? "Active" : "Session Ended");
+        holder.tvConcertoStatus.setTextColor(isActive ? android.graphics.Color.parseColor("#7C72E0") : android.graphics.Color.parseColor("#AAAAAA"));
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

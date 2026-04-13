@@ -62,7 +62,7 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.TrackViewHol
 
         boolean isPlaying = track.uri.equals(currentPlayingUri);
         holder.tvTrackName.setText(track.name);
-        holder.tvTrackName.setTextColor(isPlaying ? android.graphics.Color.parseColor("#1DB954") : android.graphics.Color.parseColor("#FFFFFF"));
+        holder.tvTrackName.setTextColor(isPlaying ? android.graphics.Color.parseColor("#7C72E0") : android.graphics.Color.parseColor("#FFFFFF"));
         holder.tvTrackName.setTypeface(null, isPlaying ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
 
         String artistName = (track.artist != null && track.artist.name != null)

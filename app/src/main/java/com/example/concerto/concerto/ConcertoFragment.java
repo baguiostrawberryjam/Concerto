@@ -234,7 +234,10 @@ public class ConcertoFragment extends Fragment {
             if (isHost == null || bind == null) return;
             bind.btnHostSkip.setVisibility(isHost ? View.VISIBLE : View.GONE);
             bind.btnTempLeave.setVisibility(isHost ? View.VISIBLE : View.GONE);
-            bind.btnLeaveSession.setText(isHost ? "End Session" : "Leave");
+            // btnLeaveSession is an ImageButton — tint it red for host to signal End Session
+            bind.btnLeaveSession.setColorFilter(isHost
+                    ? android.graphics.Color.parseColor("#FF5555")
+                    : android.graphics.Color.parseColor("#FFFFFF"));
 
             // Pulse dots only for guests
             bind.layoutListeningDots.setVisibility(isHost ? View.GONE : View.VISIBLE);
