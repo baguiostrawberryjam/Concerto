@@ -2,24 +2,20 @@ package com.example.concerto.models;
 
 public class User {
 
-    // Basic profile
     public String username;
+    public String usernameLower; // Lowercase version for case-insensitive uniqueness checks
     public String email;
 
-    // Future Concerto-specific fields
     public String joinCode;
     public String playlistId;
 
     // Required empty constructor for Firebase
-    public User() {
-    }
+    public User() {}
 
-    // Constructor for signup (basic fields)
     public User(String username, String email) {
         this.username = username;
-        this.email = email;
-
-        // initialize empty values for safety
+        this.usernameLower = username != null ? username.toLowerCase() : "";
+        this.email = email != null ? email.toLowerCase() : ""; // Always store email lowercase
         this.joinCode = "";
         this.playlistId = "";
     }

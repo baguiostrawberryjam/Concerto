@@ -1,191 +1,219 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="48dp"
+    android:paddingBottom="32dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="44dp">
+
+        <ImageButton
+            android:id="@+id/btnGoToLogin"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_button_minimize"
+            android:rotation="90"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="CREATE ACCOUNT"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Username"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/plus_jakarta_sans_regular"
+        android:layout_marginBottom="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_input_field"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp">
+
+        <EditText
+            android:id="@+id/etUsername"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:inputType="textPersonName"
+            android:maxLength="20"
+            android:hint="e.g. concerto_user"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#555555"
+            android:textSize="14sp"
+            android:background="@android:color/transparent"
+            android:paddingStart="0dp" />
+
+        <ProgressBar
+            android:id="@+id/pbUsernameChecking"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:visibility="gone"
+            android:layout_marginEnd="4dp" />
+
+        <ImageView
+            android:id="@+id/ivUsernameStatus"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@android:drawable/presence_invisible"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvUsernameStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="3–20 characters"
+        android:textColor="#555555"
+        android:textSize="11sp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="14dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Email"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/plus_jakarta_sans_regular"
+        android:layout_marginBottom="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_input_field"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <EditText
+            android:id="@+id/etEmail"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:inputType="textEmailAddress"
+            android:hint="name@example.com"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#555555"
+            android:textSize="14sp"
+            android:background="@android:color/transparent"
+            android:paddingStart="0dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvEmailStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Must be a valid email address"
+        android:textColor="#555555"
+        android:textSize="11sp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="14dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Password"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/plus_jakarta_sans_regular"
+        android:layout_marginBottom="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_input_field"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="4dp">
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:inputType="textPassword"
+            android:hint="Min. 12 characters"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#555555"
+            android:textSize="14sp"
+            android:background="@android:color/transparent"
+            android:paddingStart="0dp" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="32dp"
-        android:gravity="center_horizontal">
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="20dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Create Account"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="32dp" />
+        <TextView android:id="@+id/tvReqLength"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="✗  At least 12 characters"
+            android:textSize="11sp" android:textColor="#FF5555"
+            android:layout_marginBottom="2dp" />
 
-        <!-- USERNAME -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilUsername"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Username"
-            android:layout_marginBottom="4dp"
-            app:errorEnabled="true"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+        <TextView android:id="@+id/tvReqUpper"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="✗  At least 1 uppercase letter"
+            android:textSize="11sp" android:textColor="#FF5555"
+            android:layout_marginBottom="2dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etUsername"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPersonName"
-                android:maxLength="20" />
-        </com.google.android.material.textfield.TextInputLayout>
+        <TextView android:id="@+id/tvReqLower"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="✗  At least 1 lowercase letter"
+            android:textSize="11sp" android:textColor="#FF5555"
+            android:layout_marginBottom="2dp" />
 
-        <!-- Username status row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+        <TextView android:id="@+id/tvReqNumber"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="✗  At least 1 number"
+            android:textSize="11sp" android:textColor="#FF5555"
+            android:layout_marginBottom="2dp" />
 
-            <ImageView
-                android:id="@+id/ivUsernameStatus"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@android:drawable/presence_invisible"
-                android:layout_marginEnd="6dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/tvUsernameStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="12sp"
-                android:textColor="#AAAAAA"
-                android:text="3–20 characters" />
-
-            <ProgressBar
-                android:id="@+id/pbUsernameChecking"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- EMAIL -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilEmail"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Email Address"
-            android:layout_marginBottom="4dp"
-            app:errorEnabled="true"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEmail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textEmailAddress" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <TextView
-            android:id="@+id/tvEmailStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="#AAAAAA"
-            android:text="Must be a valid email address"
-            android:layout_marginBottom="16dp" />
-
-        <!-- PASSWORD -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/tilPassword"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Password"
-            android:layout_marginBottom="8dp"
-            app:passwordToggleEnabled="true"
-            app:errorEnabled="true"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPassword"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textPassword" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Password requirements checklist -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="24dp"
-            android:paddingStart="4dp">
-
-            <TextView
-                android:id="@+id/tvReqLength"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✗  At least 12 characters"
-                android:textSize="12sp"
-                android:textColor="#FF5555"
-                android:layout_marginBottom="2dp" />
-
-            <TextView
-                android:id="@+id/tvReqUpper"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✗  At least 1 uppercase letter"
-                android:textSize="12sp"
-                android:textColor="#FF5555"
-                android:layout_marginBottom="2dp" />
-
-            <TextView
-                android:id="@+id/tvReqLower"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✗  At least 1 lowercase letter"
-                android:textSize="12sp"
-                android:textColor="#FF5555"
-                android:layout_marginBottom="2dp" />
-
-            <TextView
-                android:id="@+id/tvReqNumber"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✗  At least 1 number"
-                android:textSize="12sp"
-                android:textColor="#FF5555"
-                android:layout_marginBottom="2dp" />
-
-            <TextView
-                android:id="@+id/tvReqSpecial"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="✗  At least 1 special character (!@#$...)"
-                android:textSize="12sp"
-                android:textColor="#FF5555" />
-        </LinearLayout>
-
-        <!-- Sign Up button (disabled until all valid) -->
-        <Button
-            android:id="@+id/btnSignup"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Sign Up"
-            android:enabled="false"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/btnGoToLogin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Back to Login"
-            style="?android:attr/borderlessButtonStyle" />
-
+        <TextView android:id="@+id/tvReqSpecial"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="✗  At least 1 special character (!@#$...)"
+            android:textSize="11sp" android:textColor="#FF5555" />
     </LinearLayout>
-</ScrollView>
+
+    <Button
+        android:id="@+id/btnSignup"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/action_signup"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:includeFontPadding="false"
+        android:layout_marginBottom="24dp" />
+
+</LinearLayout>

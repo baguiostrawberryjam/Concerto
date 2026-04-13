@@ -31,7 +31,6 @@ public class SignupFragment extends Fragment {
     private Runnable usernameCheckRunnable;
     private Runnable emailCheckRunnable;
 
-    // Validation state flags
     private boolean usernameValid = false;
     private boolean emailValid = false;
     private boolean passwordValid = false;
@@ -77,13 +76,11 @@ public class SignupFragment extends Fragment {
                 validateUsernameFormat(s.toString().trim());
             }
         });
-
         bind.etEmail.addTextChangedListener(new SimpleTextWatcher() {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 validateEmailFormat(s.toString().trim());
             }
         });
-
         bind.etPassword.addTextChangedListener(new SimpleTextWatcher() {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 validatePassword(s.toString());
@@ -132,12 +129,15 @@ public class SignupFragment extends Fragment {
         bind.tvUsernameStatus.setText(message);
         bind.tvUsernameStatus.setTextColor(valid
                 ? android.graphics.Color.parseColor("#1DB954")
-                : android.graphics.Color.parseColor("#AAAAAA"));
+                : android.graphics.Color.parseColor("#555555"));
         bind.pbUsernameChecking.setVisibility(loading ? View.VISIBLE : View.GONE);
-        bind.ivUsernameStatus.setVisibility(loading ? View.GONE : View.VISIBLE);
-        bind.ivUsernameStatus.setImageResource(valid
-                ? android.R.drawable.presence_online
-                : android.R.drawable.presence_offline);
+        bind.ivUsernameStatus.setVisibility((!loading && !message.equals("3–20 characters"))
+                ? View.VISIBLE : View.GONE);
+        if (!loading) {
+            bind.ivUsernameStatus.setImageResource(valid
+                    ? android.R.drawable.presence_online
+                    : android.R.drawable.presence_offline);
+        }
     }
 
     // ---- EMAIL ----
@@ -146,14 +146,13 @@ public class SignupFragment extends Fragment {
         if (emailCheckRunnable != null) debounceHandler.removeCallbacks(emailCheckRunnable);
 
         if (email.isEmpty()) {
-            setEmailState(false, "Must be a valid email address", false); return;
+            setEmailState(false, "Must be a valid email address"); return;
         }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            setEmailState(false, "Must be a valid email address (e.g. name@example.com)", false); return;
+            setEmailState(false, "Must be a valid email address (e.g. name@example.com)"); return;
         }
 
-        // Format valid — debounce uniqueness check
-        setEmailState(false, "Checking availability...", true);
+        setEmailState(false, "Checking availability...");
         emailCheckPending = true;
         updateSignupButton();
 
@@ -161,24 +160,22 @@ public class SignupFragment extends Fragment {
             if (bind == null) return;
             emailCheckPending = false;
             if (available) {
-                setEmailState(true, "✓  Email is available", false);
+                setEmailState(true, "✓  Email is available");
             } else {
-                setEmailState(false, "✗  An account with this email already exists", false);
+                setEmailState(false, "✗  An account with this email already exists");
             }
             updateSignupButton();
         });
         debounceHandler.postDelayed(emailCheckRunnable, 600);
     }
 
-    private void setEmailState(boolean valid, String message, boolean loading) {
+    private void setEmailState(boolean valid, String message) {
         if (bind == null) return;
         emailValid = valid;
         bind.tvEmailStatus.setText(message);
         bind.tvEmailStatus.setTextColor(valid
                 ? android.graphics.Color.parseColor("#1DB954")
-                : android.graphics.Color.parseColor("#AAAAAA"));
-        // Reuse username spinner/icon views pattern — email uses tvEmailStatus only
-        // (no separate spinner in layout, spinner feedback via text is sufficient)
+                : android.graphics.Color.parseColor("#555555"));
     }
 
     // ---- PASSWORD ----
@@ -223,7 +220,6 @@ public class SignupFragment extends Fragment {
     private void setupButtons() {
         bind.btnSignup.setEnabled(false);
         bind.btnSignup.setAlpha(0.4f);
-
         bind.btnSignup.setOnClickListener(v -> createAccount());
         bind.btnGoToLogin.setOnClickListener(v ->
                 requireActivity().getSupportFragmentManager().popBackStack());
@@ -244,16 +240,12 @@ public class SignupFragment extends Fragment {
             @Override
             public void onSuccess() {
                 if (!isAdded() || getActivity() == null || getActivity().isFinishing()) return;
-
                 authViewModel.logoutSpotify();
-
                 View bottomNav = getActivity().findViewById(R.id.bottomNav);
                 if (bottomNav != null) bottomNav.setVisibility(View.GONE);
-
                 getActivity().getSupportFragmentManager().beginTransaction()
                         .replace(R.id.layoutFragmentContainer, new OnboardingFragment())
                         .commitAllowingStateLoss();
-
                 getActivity().getSupportFragmentManager().beginTransaction()
                         .replace(R.id.layoutPlayerSheetContainer, new PlayerFragment(), "PLAYER")
                         .commitAllowingStateLoss();
@@ -264,16 +256,12 @@ public class SignupFragment extends Fragment {
                 if (!isAdded()) return;
                 if (bind != null) {
                     bind.btnSignup.setEnabled(true);
-                    bind.btnSignup.setText("Sign Up");
+                    bind.btnSignup.setText("Sign-up");
                 }
-                showErrorDialog("Sign Up Failed", errorMessage);
+                showErrorDialog("Sign-up Failed", errorMessage);
             }
         });
     }
-
-    // ==========================================
-    // HELPERS
-    // ==========================================
 
     private void showErrorDialog(String title, String message) {
         if (!isAdded() || getActivity() == null) return;

@@ -15,34 +15,46 @@ public class SignupViewModel extends ViewModel {
         void onResult(boolean isAvailable);
     }
 
-    /** Checks whether a username is already taken. Requires .indexOn ["username"] in Firebase rules. */
+    /**
+     * Checks whether a username is already taken.
+     * Stores and queries as lowercase so "Alice" and "alice" are treated as the same.
+     * Requires .indexOn ["usernameLower"] in Firebase rules.
+     */
     public void checkUsernameAvailable(String username, AvailabilityCallback callback) {
         if (username == null || username.trim().isEmpty()) {
             if (callback != null) callback.onResult(false);
             return;
         }
-        usersRef.orderByChild("username").equalTo(username.trim()).get()
+        // Query the lowercase field to catch case-insensitive duplicates
+        String usernameLower = username.trim().toLowerCase();
+        usersRef.orderByChild("usernameLower").equalTo(usernameLower).get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         if (callback != null) callback.onResult(!task.getResult().exists());
                     } else {
-                        if (callback != null) callback.onResult(true); // allow on network error
+                        // Network error — allow optimistically; Firebase Auth catches at write time
+                        if (callback != null) callback.onResult(true);
                     }
                 });
     }
 
-    /** Checks whether an email is already registered. Requires .indexOn ["email"] in Firebase rules. */
+    /**
+     * Checks whether an email is already registered.
+     * Queries as lowercase so casing differences don't bypass the check.
+     * Requires .indexOn ["email"] in Firebase rules.
+     */
     public void checkEmailAvailable(String email, AvailabilityCallback callback) {
         if (email == null || email.trim().isEmpty()) {
             if (callback != null) callback.onResult(false);
             return;
         }
-        usersRef.orderByChild("email").equalTo(email.trim().toLowerCase()).get()
+        String emailLower = email.trim().toLowerCase();
+        usersRef.orderByChild("email").equalTo(emailLower).get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         if (callback != null) callback.onResult(!task.getResult().exists());
                     } else {
-                        if (callback != null) callback.onResult(true); // allow on network error
+                        if (callback != null) callback.onResult(true);
                     }
                 });
     }
