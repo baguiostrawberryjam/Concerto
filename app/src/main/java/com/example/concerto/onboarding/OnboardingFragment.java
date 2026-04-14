@@ -1,5 +1,6 @@
 package com.example.concerto.onboarding;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,7 +38,6 @@ public class OnboardingFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         buildPages();
         setupViewPager();
         setupDots();
@@ -50,48 +50,40 @@ public class OnboardingFragment extends Fragment {
         bind = null;
     }
 
-    // ==========================================
-    // PAGE CONTENT DEFINITIONS
-    // ==========================================
-
     private void buildPages() {
         pages = new ArrayList<>();
 
         pages.add(new OnboardingPage(
-                "View Spotify Tracks!",
-                "Discover millions of tracks from Spotify's full catalogue — browse, search, and find your next favourite song all in one place.",
-                android.R.drawable.ic_menu_slideshow,
+                "View *Spotify* Tracks!",
+                "Discover millions of tracks from Spotify's full catalogue.",
+                R.drawable.img_onboarding_1,
                 false
         ));
 
         pages.add(new OnboardingPage(
-                "Play Music",
-                "Stream full tracks instantly with Spotify Premium. Tap any song to play, pause, seek, and control your listening experience seamlessly.",
-                android.R.drawable.ic_media_play,
+                "Play *Music*",
+                "Stream full tracks instantly with Spotify Premium.",
+                R.drawable.img_onboarding_2,
                 false
         ));
 
         pages.add(new OnboardingPage(
-                "Personalized Playlist Creation",
-                "Curate your soundtrack and craft personalised joint playlists with Concerto. Vote on tracks, skip ahead, and shape the music everyone hears — together.",
-                android.R.drawable.ic_menu_share,
+                "*Personalized* Playlist Creation",
+                "Curate your soundtrack and craft personalised joint playlists with Concerto.",
+                R.drawable.img_onboarding_3,
                 false
         ));
 
         pages.add(new OnboardingPage(
-                "Connect to Spotify!",
-                "Link your Spotify Premium account to unlock full playback and hosting. Free accounts can still join rooms and vote on tracks.",
-                android.R.drawable.ic_menu_add,
-                true  // Shows the Connect button
+                "*Connect* to Spotify!",
+                "Link your Spotify Premium account to unlock full playback and hosting.",
+                R.drawable.img_onboarding_4,
+                true
         ));
     }
 
-    // ==========================================
-    // VIEWPAGER2 SETUP
-    // ==========================================
-
     private void setupViewPager() {
-        pagerAdapter = new OnboardingPagerAdapter(pages, this::navigateToConnectSpotify);
+        pagerAdapter = new OnboardingPagerAdapter(pages);
         bind.viewPagerOnboarding.setAdapter(pagerAdapter);
         bind.viewPagerOnboarding.setOffscreenPageLimit(pages.size());
 
@@ -104,21 +96,23 @@ public class OnboardingFragment extends Fragment {
         });
     }
 
-    // ==========================================
-    // DOTS INDICATOR
-    // ==========================================
-
     private void setupDots() {
         dotViews = new ImageView[pages.size()];
         int dotSizePx = (int) (8 * getResources().getDisplayMetrics().density);
-        int dotMarginPx = (int) (6 * getResources().getDisplayMetrics().density);
+        int dotMarginPx = (int) (4 * getResources().getDisplayMetrics().density);
 
         for (int i = 0; i < pages.size(); i++) {
             ImageView dot = new ImageView(requireContext());
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dotSizePx, dotSizePx);
-            params.setMargins(0, 0, dotMarginPx, 0);
+            params.setMargins(dotMarginPx, 0, dotMarginPx, 0);
             dot.setLayoutParams(params);
+
+            // Set tint to primary color if active
             dot.setImageResource(i == 0 ? R.drawable.dot_active : R.drawable.dot_inactive);
+            if (i == 0) {
+                dot.setColorFilter(Color.parseColor("#7C72E0"));
+            }
+
             bind.llDots.addView(dot);
             dotViews[i] = dot;
         }
@@ -127,12 +121,13 @@ public class OnboardingFragment extends Fragment {
     private void updateDots(int activeIndex) {
         for (int i = 0; i < dotViews.length; i++) {
             dotViews[i].setImageResource(i == activeIndex ? R.drawable.dot_active : R.drawable.dot_inactive);
+            if (i == activeIndex) {
+                dotViews[i].setColorFilter(Color.parseColor("#7C72E0"));
+            } else {
+                dotViews[i].clearColorFilter();
+            }
         }
     }
-
-    // ==========================================
-    // BUTTONS
-    // ==========================================
 
     private void setupButtons() {
         bind.btnSkip.setOnClickListener(v -> navigateToDashboard());
@@ -142,8 +137,8 @@ public class OnboardingFragment extends Fragment {
             if (current < pages.size() - 1) {
                 bind.viewPagerOnboarding.setCurrentItem(current + 1, true);
             } else {
-                // Last page "Next" = go to Dashboard
-                navigateToDashboard();
+                // On last page, it connects to Spotify
+                navigateToConnectSpotify();
             }
         });
     }
@@ -151,18 +146,11 @@ public class OnboardingFragment extends Fragment {
     private void updateButtons(int position) {
         if (bind == null) return;
         boolean isLastPage = (position == pages.size() - 1);
-        bind.btnNext.setText(isLastPage ? "Get Started" : "Next");
-        // Keep skip always visible as "Go to Dashboard" shortcut on every page
-        bind.btnSkip.setVisibility(View.VISIBLE);
+        bind.btnNext.setText(isLastPage ? "Connect to Spotify" : "Next");
     }
-
-    // ==========================================
-    // NAVIGATION
-    // ==========================================
 
     private void navigateToDashboard() {
         if (!isAdded() || getActivity() == null) return;
-
         getActivity().getSupportFragmentManager().beginTransaction()
                 .replace(R.id.layoutFragmentContainer, new DashboardFragment())
                 .commitAllowingStateLoss();

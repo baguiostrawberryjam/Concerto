@@ -6,9 +6,8 @@
     android:layout_height="match_parent"
     android:background="@color/background"
     android:orientation="vertical"
-    android:paddingHorizontal="24dp"
-    android:paddingTop="48dp"
-    android:paddingBottom="32dp">
+    android:paddingHorizontal="16dp"
+    android:paddingTop="32dp">
 
     <!-- Header — same pattern as signup fragment -->
     <RelativeLayout
